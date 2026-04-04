@@ -35,7 +35,7 @@ func TestAdapterStartSendPromptAndRespondToolCall(t *testing.T) {
 			if err := decodeParams(initialize.Params, &initializeParams); err != nil {
 				return err
 			}
-			if initializeParams.ClientInfo.Name != "openase" || initializeParams.ClientInfo.Version != "0.1.0" {
+			if initializeParams.ClientInfo.Name != "openase" || initializeParams.ClientInfo.Version != "0.1.1" {
 				return errors.New("unexpected initialize client info")
 			}
 			if initializeParams.Capabilities == nil || !initializeParams.Capabilities.ExperimentalAPI {
@@ -177,7 +177,7 @@ func TestAdapterStartSendPromptAndRespondToolCall(t *testing.T) {
 		Process: processSpec,
 		Initialize: InitializeParams{
 			ClientName:    "openase",
-			ClientVersion: "0.1.0",
+			ClientVersion: "0.1.1",
 		},
 		Thread: ThreadStartParams{
 			WorkingDirectory:       "/tmp/openase",
@@ -1262,7 +1262,7 @@ func TestSessionStopAddsDefaultTimeoutWhenDeadlineIsMissing(t *testing.T) {
 		Process: processSpec,
 		Initialize: InitializeParams{
 			ClientName:    "openase",
-			ClientVersion: "0.1.0",
+			ClientVersion: "0.1.1",
 		},
 		Thread: ThreadStartParams{
 			WorkingDirectory: "/tmp/openase",
@@ -1332,7 +1332,7 @@ func TestSessionStopDropsLateNotificationsAfterShutdown(t *testing.T) {
 		Process: processSpec,
 		Initialize: InitializeParams{
 			ClientName:    "openase",
-			ClientVersion: "0.1.0",
+			ClientVersion: "0.1.1",
 		},
 		Thread: ThreadStartParams{
 			WorkingDirectory: "/tmp/openase",

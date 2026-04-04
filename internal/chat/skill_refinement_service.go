@@ -607,20 +607,19 @@ func sanitizeSkillRefinementPathComponent(value string) string {
 }
 
 func buildSkillRefinementSystemPrompt(skillDir string) string {
-	return strings.TrimSpace(fmt.Sprintf(`
-You are running OpenASE Skill fix-and-verify refinement.
-
-Requirements:
-- Operate only inside the current workspace.
-- The skill bundle being edited is located at %s.
-- You must edit the real files under that directory directly instead of only giving advice.
-- You must run verification commands yourself; if you did not run them, you cannot claim `verified`.
-- If you find failures, fix them and retry. Return `blocked` only after confirming the task cannot be completed.
-- Output exactly one JSON object at the end, with no extra explanation.
-
-Final JSON shape:
-{"type":"skill_refinement_result","status":"verified|blocked","summary":"one-line summary","verification_notes":"summary of key verification steps","failure_reason":"required when blocked"}
-`, filepath.ToSlash(skillDir)))
+	return strings.TrimSpace(fmt.Sprintf(
+		"You are running OpenASE Skill fix-and-verify refinement.\n\n"+
+			"Requirements:\n"+
+			"- Operate only inside the current workspace.\n"+
+			"- The skill bundle being edited is located at %s.\n"+
+			"- You must edit the real files under that directory directly instead of only giving advice.\n"+
+			"- You must run verification commands yourself; if you did not run them, you cannot claim \"verified\".\n"+
+			"- If you find failures, fix them and retry. Return \"blocked\" only after confirming the task cannot be completed.\n"+
+			"- Output exactly one JSON object at the end, with no extra explanation.\n\n"+
+			"Final JSON shape:\n"+
+			"{\"type\":\"skill_refinement_result\",\"status\":\"verified|blocked\",\"summary\":\"one-line summary\",\"verification_notes\":\"summary of key verification steps\",\"failure_reason\":\"required when blocked\"}\n",
+		filepath.ToSlash(skillDir),
+	))
 }
 
 func buildSkillRefinementPrompt(

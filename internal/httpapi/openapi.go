@@ -2146,7 +2146,7 @@ func BuildOpenAPIDocument() (*openapi3.T, error) {
 		OpenAPI: "3.0.3",
 		Info: &openapi3.Info{
 			Title:       "OpenASE Frontend Contract API",
-			Version:     "0.1.0",
+			Version:     "0.1.1",
 			Description: "OpenAPI contract for the current OpenASE web control-plane surface.",
 		},
 		Paths: openapi3.NewPaths(),

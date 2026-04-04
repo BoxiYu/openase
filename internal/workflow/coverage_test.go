@@ -632,7 +632,7 @@ func TestHarnessTemplateHelpers(t *testing.T) {
 		MaxAttempts:        3,
 		Workspace:          "/workspaces/ASE-278",
 		Timestamp:          now.Format(time.RFC3339),
-		OpenASEVersion:     "0.1.0",
+		OpenASEVersion:     "0.1.1",
 		Workflow:           HarnessWorkflowData{Name: "Coding", Type: "coding", RoleName: "Backend Engineer", PickupStatus: "Todo", FinishStatus: "Done"},
 		Platform:           platform,
 	}
