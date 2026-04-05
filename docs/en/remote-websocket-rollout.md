@@ -1,6 +1,6 @@
-# Remote Websocket Transport Rollout Guide
+# Remote Runtime v1 Rollout Guide
 
-This guide turns the remote websocket transport into an operable feature instead of a code-only implementation. It covers the validation matrix, observability contract, deployment prerequisites, daemon install flow, upgrade and rollback steps, and the rollout checklist.
+This guide documents the final Remote Runtime v1 model: remote execution is websocket-only, SSH stays in the helper lane, and operators choose between a direct-connect listener or a reverse-connect machine-agent daemon. It covers supported topologies, migration from legacy machine records, validation, observability, daemon install, upgrade and rollback, and the staged rollout checklist.
 
 Terminology used in this guide:
 
@@ -8,6 +8,22 @@ Terminology used in this guide:
 - `reverse_connect`: the machine daemon can dial back to the control plane.
 - `websocket`: the intended remote execution path.
 - `ssh_compat`: a legacy stored execution value that should be migrated to websocket. SSH remains helper-only for bootstrap, diagnostics, and emergency repair.
+
+## Architecture Summary
+
+Remote Runtime v1 splits remote machine behavior into three separate concerns:
+
+- topology: `direct_connect` or `reverse_connect`
+- runtime plane: websocket only
+- helper lane: optional SSH bootstrap and diagnostics
+
+That separation maps onto the stored machine fields and runtime entrypoints like this:
+
+| Topology | Stored machine state | Runtime entrypoint | Notes |
+| --- | --- | --- | --- |
+| Direct-connect listener | `reachability_mode=direct_connect`, `execution_mode=websocket`, `connection_mode=ws_listener` | Control plane dials the saved `advertised_endpoint` | Use this when OpenASE can reach the machine directly |
+| Reverse-connect daemon | `reachability_mode=reverse_connect`, `execution_mode=websocket`, `connection_mode=ws_reverse` | Remote host runs `openase machine-agent run` and keeps a machine-channel session open | Use this when the machine can dial out but should not expose an inbound listener |
+| Legacy compatibility record | `execution_mode=ssh_compat` | None for normal runtime execution | Migration-only state; ticket execution must not fall back to SSH |
 
 ## Automated Validation Matrix
 
@@ -17,12 +33,13 @@ Run the focused transport matrix from the repo root:
 scripts/ci/remote_transport_matrix.sh
 ```
 
-The matrix currently covers:
+The fast matrix currently covers:
 
 | Scenario | Coverage |
 | --- | --- |
 | Unified websocket runtime contract across listener and reverse topologies | `TestUnifiedWebsocketRuntimeContractSuite` |
 | SSH bootstrap + reverse websocket machine session | `TestMachineConnectWebsocketPublishesActivityAndMetrics` |
+| Reverse websocket runtime happy path with hooks and artifact sync | `TestRuntimeLauncherLaunchesWebsocketReverseRuntimeWithHooksAndArtifactSync` |
 | SSH bootstrap helper behavior | `TestRunMachineSSHBootstrapUploadsBinaryEnvAndService` |
 | SSH diagnostics helper behavior | `TestRunMachineSSHDiagnosticsReportsBootstrapAndRegistrationIssues` |
 | SSH bootstrap + listener websocket runtime | `TestRuntimeLauncherLaunchesWebsocketListenerRuntimeWithHooksAndArtifactSync` |
@@ -38,6 +55,53 @@ What each happy-path runtime case verifies:
 - agent process launch
 - output streaming or command handshake
 - cleanup or disconnect bookkeeping
+
+## CI And Local Validation Strategy
+
+Use the validation layers in this order:
+
+1. `scripts/ci/remote_transport_matrix.sh`
+2. `make remote-runtime-container` or `scripts/ci/remote_runtime_container_harness.sh ...` for Linux + Docker Compose hosts
+3. targeted operator checks such as `openase machine test <machine-uuid>` and `openase machine ssh-diagnostics <machine-uuid>` during rollout
+
+The intent is:
+
+- fast matrix in normal repo and pull-request validation
+- container harness for local-only or manual/nightly rollout-grade checks
+- operator commands for machine-specific diagnosis after deployment
+
+## Local Container Harness
+
+Use the slow local-only container harness when you need real daemon startup,
+container networking, remote filesystem permissions, SSH transport, and process
+execution instead of in-process fakes:
+
+```bash
+make remote-runtime-container
+```
+
+Run targeted cases directly when you only need one slice:
+
+```bash
+scripts/ci/remote_runtime_container_harness.sh listener
+scripts/ci/remote_runtime_container_harness.sh reverse ssh
+```
+
+The container harness:
+
+- stays out of the normal pull-request CI workflow
+- writes case logs plus compose service logs under `.artifacts/remote-runtime-container/`
+- requires Linux plus Docker Compose
+- uses `scripts/ci/remote_runtime_container.compose.yml`
+- is available in a separate manual/nightly workflow: `.github/workflows/remote-runtime-container.yml`
+
+Current container cases:
+
+| Scenario | Coverage |
+| --- | --- |
+| Direct-connect websocket runtime over a real listener container | `TestWebsocketListenerRuntimeContainerE2E` |
+| Reverse-connect websocket runtime over a real machine-agent container | `TestWebsocketReverseRuntimeContainerE2E` |
+| SSH bootstrap + diagnostics helper over a real SSH container | `TestMachineSSHHelperContainerE2E` |
 
 The runtime contract itself is now shared by both websocket topologies:
 
@@ -127,6 +191,72 @@ SSH compatibility:
 
 - is no longer a supported runtime fallback path
 - should be treated as legacy record state plus helper infrastructure, not as the remote execution model
+
+## Migrating Existing Machine Records
+
+### Inventory Current State
+
+List machines and identify any record that still stores `execution_mode=ssh_compat` or is missing the topology-specific fields needed for websocket execution:
+
+```bash
+openase machine list
+```
+
+### Migrate A Direct-connect Machine
+
+Use this path when the control plane can dial the machine directly:
+
+1. Save `reachability_mode=direct_connect`.
+2. Save `execution_mode=websocket`.
+3. Save a valid `advertised_endpoint`.
+4. Resave the machine so `connection_mode` resolves to `ws_listener`.
+5. Run:
+
+```bash
+openase machine test <machine-uuid>
+```
+
+Keep SSH credentials only if you still want helper bootstrap or diagnostics access.
+
+### Migrate A Reverse-connect Machine
+
+Use this path when the machine should dial back to the control plane:
+
+1. Save `reachability_mode=reverse_connect`.
+2. Save `execution_mode=websocket`.
+3. Save a valid `workspace_root`.
+4. Issue a dedicated machine channel token:
+
+```bash
+openase machine issue-channel-token \
+  --machine-id <machine-uuid> \
+  --ttl 24h \
+  --format shell
+```
+
+5. On the remote host, paste the exported `OPENASE_MACHINE_*` variables and start:
+
+```bash
+openase machine-agent run
+```
+
+6. Confirm the daemon session and machine checks:
+
+```bash
+openase machine test <machine-uuid>
+openase machine ssh-diagnostics <machine-uuid>
+```
+
+If you already have SSH helper access, `openase machine ssh-bootstrap <machine-uuid>` is the supported way to upload the current binary and install or refresh the reverse daemon service.
+
+### Operator Workflow Changes
+
+After migration, operators should assume all of the following:
+
+- ticket execution stays on websocket for both remote topologies
+- direct-connect failures are listener reachability problems first, not SSH fallback candidates
+- reverse-connect failures are daemon registration or session health problems first
+- SSH commands repair or bootstrap remote access, but they are outside the runtime execution plane
 
 ## Bootstrap And Daemon Install
 
@@ -258,6 +388,7 @@ Use `openase machine ssh-diagnostics <machine-uuid>` when you need a quick helpe
 
 - enable `ws_reverse` on a small machine subset
 - keep SSH credentials only where operators want helper bootstrap or diagnostics
+- run at least one reverse websocket happy-path runtime per rollout batch
 - verify `machine.connected` and reconnect behavior under a daemon restart
 - confirm a forced websocket transport failure stays classified as a websocket-side launch error
 

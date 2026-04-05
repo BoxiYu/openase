@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -19,8 +20,15 @@ import (
 	machinechanneldomain "github.com/BetterAndBetterII/openase/internal/domain/machinechannel"
 	runtimecontract "github.com/BetterAndBetterII/openase/internal/domain/websocketruntime"
 	workspaceinfra "github.com/BetterAndBetterII/openase/internal/infra/workspace"
+	"github.com/BetterAndBetterII/openase/internal/testutil/containerharness"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+)
+
+const (
+	websocketListenerContainerHelperEnv = "OPENASE_TEST_WS_LISTENER_HELPER"
+	websocketListenerContainerPortEnv   = "OPENASE_TEST_WS_LISTENER_PORT"
+	websocketListenerContainerPort      = 19852
 )
 
 func TestUnifiedWebsocketRuntimeContractSuite(t *testing.T) {
@@ -127,6 +135,56 @@ func TestUnifiedWebsocketRuntimeContractSuite(t *testing.T) {
 			t.Fatalf("reverse runtime participant error = %v", err)
 		}
 	})
+}
+
+func TestWebsocketListenerRuntimeContainerE2E(t *testing.T) {
+	containerharness.RequireContainerSuite(t)
+
+	testBinary, err := os.Executable()
+	if err != nil {
+		t.Fatalf("resolve current executable: %v", err)
+	}
+
+	hostPort := containerharness.FreeTCPPort(t)
+	project := containerharness.NewProject(t, containerharness.Options{
+		ProjectName: "ase41-listener-" + strings.ToLower(strings.ReplaceAll(uuid.NewString(), "-", "")),
+		Env: map[string]string{
+			"OPENASE_TEST_WS_LISTENER_BINARY":    filepath.Clean(testBinary),
+			"OPENASE_TEST_WS_LISTENER_HOST_PORT": fmt.Sprintf("%d", hostPort),
+			"OPENASE_TEST_WS_LISTENER_PORT":      fmt.Sprintf("%d", websocketListenerContainerPort),
+			"OPENASE_TEST_TMP_ROOT":              filepath.Clean(os.TempDir()),
+			"OPENASE_TEST_UID":                   fmt.Sprintf("%d", os.Getuid()),
+			"OPENASE_TEST_GID":                   fmt.Sprintf("%d", os.Getgid()),
+		},
+	})
+	project.Up(t, nil, "ws-listener")
+	project.WriteLogs(t, "listener-compose.log", nil, "ws-listener")
+
+	machine := testListenerMachine(fmt.Sprintf("ws://127.0.0.1:%d", hostPort), "")
+	waitForContainerListenerRuntime(t, machine)
+	runRuntimeContractSuite(t, machine, func(ctx context.Context) (*runtimeProtocolClient, func(error), error) {
+		return dialWebsocketRuntimeClient(ctx, machine)
+	})
+}
+
+func TestWebsocketListenerRuntimeContainerHelper(t *testing.T) {
+	if os.Getenv(websocketListenerContainerHelperEnv) != "1" {
+		t.Skip("helper process only")
+	}
+
+	port := strings.TrimSpace(os.Getenv(websocketListenerContainerPortEnv))
+	if port == "" {
+		t.Fatal("listener helper port is required")
+	}
+
+	server := &http.Server{
+		Addr:              "0.0.0.0:" + port,
+		Handler:           NewWebsocketListenerHandler(ListenerHandlerOptions{}),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		t.Fatalf("listener helper server failed: %v", err)
+	}
 }
 
 func runRuntimeContractSuite(
@@ -415,4 +473,23 @@ func runtimeEnvelopeFromMachineEnvelopeForTest(envelope machinechanneldomain.Env
 		return runtimecontract.Envelope{}, err
 	}
 	return runtimeEnvelope, nil
+}
+
+func waitForContainerListenerRuntime(t *testing.T, machine catalogdomain.Machine) {
+	t.Helper()
+
+	transport := websocketTransport{mode: catalogdomain.MachineConnectionModeWSListener}
+	deadline := time.Now().Add(20 * time.Second)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		_, err := transport.Probe(ctx, machine)
+		cancel()
+		if err == nil {
+			return
+		}
+		lastErr = err
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatalf("listener container runtime for %s did not become reachable: %v", machine.Name, lastErr)
 }

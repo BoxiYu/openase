@@ -37,9 +37,24 @@ run_case \
   'TestMachineConnectWebsocketAuthFailurePublishesActivityAndMetric$'
 
 run_case \
+  "SSH bootstrap helper behavior" \
+  "./internal/cli" \
+  'TestRunMachineSSHBootstrapUploadsBinaryEnvAndService$'
+
+run_case \
+  "SSH diagnostics helper behavior" \
+  "./internal/cli" \
+  'TestRunMachineSSHDiagnosticsReportsBootstrapAndRegistrationIssues$'
+
+run_case \
   "Listener websocket runtime happy path" \
   "./internal/orchestrator" \
   'TestRuntimeLauncherLaunchesWebsocketListenerRuntimeWithHooksAndArtifactSync$'
+  
+run_case \
+  "Reverse websocket runtime happy path" \
+  "./internal/orchestrator" \
+  'TestRuntimeLauncherLaunchesWebsocketReverseRuntimeWithHooksAndArtifactSync$'
 
 run_case \
   "Listener websocket preflight failure classification" \
