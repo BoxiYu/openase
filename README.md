@@ -134,7 +134,7 @@ OpenASE supports **multi-Organization** management out of the box. Each Org cont
 
 ### ⚠️ Security Notice
 
-To maximize unattended Workflow execution efficiency, OpenASE launches CLI agents with **permissive flags by default** (e.g., `--dangerously-skip-permissions` for Claude Code, `--full-auto` for Codex). This means agents can read, write, and execute arbitrary commands on the host machine without per-action confirmation.
+To maximize unattended Workflow execution efficiency, OpenASE launches CLI agents with **permissive flags by default** (e.g., `--dangerously-skip-permissions` for Claude Code, `--yolo` for Codex). This means agents can read, write, and execute arbitrary commands on the host machine without per-action confirmation. You can change this to standard (interactive) mode per-provider in the **Provider settings** page.
 
 **Be aware of the risks:**
 - Only run OpenASE on machines where you trust the agent's scope of access.

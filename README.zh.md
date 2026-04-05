@@ -134,7 +134,7 @@ OpenASE 开箱即用支持**多组织（Org）**管理。每个 Org 包含自己
 
 ### ⚠️ 安全提醒
 
-为了最大化无人值守 Workflow 的执行效率，OpenASE 默认以**宽松权限标志**启动 CLI Agent（例如 Claude Code 的 `--dangerously-skip-permissions`、Codex 的 `--full-auto`）。这意味着 Agent 可以在宿主机上读写和执行任意命令，无需逐次确认。
+为了最大化无人值守 Workflow 的执行效率，OpenASE 默认以**宽松权限标志**启动 CLI Agent（例如 Claude Code 的 `--dangerously-skip-permissions`、Codex 的 `--yolo`）。这意味着 Agent 可以在宿主机上读写和执行任意命令，无需逐次确认。你可以在 **Provider 设置**页面中按 Provider 将其切换为 standard（交互式）模式。
 
 **请注意风险：**
 - 仅在你信任 Agent 访问范围的机器上运行 OpenASE。
