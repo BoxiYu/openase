@@ -123,6 +123,7 @@ export function createProjectConversationControllerRuntime(
     conversationId: string,
     restored: boolean,
   ) {
+    const previousPhase = tab.phase
     const currentOperationId = beginProjectConversationOperation(tab, 'restoring')
     try {
       await loadProjectConversation({
@@ -157,7 +158,7 @@ export function createProjectConversationControllerRuntime(
       if (isCurrentProjectConversationOperation(tab, currentOperationId)) {
         tab.restored = restored
         if (tab.phase === 'restoring') {
-          tab.phase = 'idle'
+          tab.phase = previousPhase === 'restoring' ? 'idle' : previousPhase
         }
       }
       touchTabs()
