@@ -254,6 +254,106 @@ describe('createProjectConversationController', () => {
     expect(controller.pending).toBe(true)
   })
 
+  it('keeps a running tab pending after switching away and hydrating it again', async () => {
+    const streamHandlers = new Map<
+      string,
+      {
+        onEvent: (event: { kind: string; payload: Record<string, unknown> }) => void
+      }
+    >()
+
+    createProjectConversation
+      .mockResolvedValueOnce({
+        conversation: {
+          id: 'conversation-1',
+          providerId: 'provider-1',
+          lastActivityAt: '2026-04-01T10:00:00Z',
+        },
+      })
+      .mockResolvedValueOnce({
+        conversation: {
+          id: 'conversation-2',
+          providerId: 'provider-1',
+          lastActivityAt: '2026-04-01T10:05:00Z',
+        },
+      })
+    getProjectConversationWorkspaceDiff
+      .mockResolvedValue(createWorkspaceDiff('conversation-1'))
+      .mockResolvedValue(createWorkspaceDiff('conversation-2'))
+    listProjectConversationEntries.mockResolvedValue({
+      entries: [
+        {
+          id: 'entry-1',
+          conversationId: 'conversation-1',
+          turnId: 'turn-1',
+          seq: 1,
+          kind: 'user_message',
+          payload: { content: 'Keep thinking' },
+          createdAt: '2026-04-01T10:00:00Z',
+        },
+        {
+          id: 'entry-2',
+          conversationId: 'conversation-1',
+          turnId: 'turn-1',
+          seq: 2,
+          kind: 'assistant_text_delta',
+          payload: { content: 'Hidden tab chunk.' },
+          createdAt: '2026-04-01T10:00:01Z',
+        },
+      ],
+    })
+    watchProjectConversationMux.mockImplementation((params) => {
+      streamHandlers.set(params.conversationId, params)
+      return resolvedMuxSubscription()
+    })
+    startProjectConversationTurn.mockResolvedValue({
+      turn: { id: 'turn-1', turn_index: 1, status: 'started' },
+    })
+
+    const controller = createProjectConversationController({
+      getProjectId: () => 'project-1',
+    })
+    controller.syncProviders(providerFixtures, 'provider-1')
+
+    await controller.sendTurn('Keep thinking')
+    const firstTabId = controller.activeTabId
+    expect(controller.phase).toBe('awaiting_reply')
+
+    controller.createTab()
+    await controller.sendTurn('Work in parallel')
+    expect(controller.activeTabId).not.toBe(firstTabId)
+
+    streamHandlers.get('conversation-1')?.onEvent({
+      kind: 'message',
+      payload: {
+        type: 'text',
+        content: 'Hidden tab chunk.',
+      },
+    })
+
+    const backgroundTab = controller.tabs.find((tab) => tab.id === firstTabId)
+    expect(backgroundTab?.needsHydration).toBe(true)
+    expect(backgroundTab?.phase).toBe('awaiting_reply')
+
+    controller.selectTab(firstTabId)
+
+    await waitFor(() => {
+      expect(listProjectConversationEntries).toHaveBeenCalledWith('conversation-1')
+    })
+
+    expect(controller.activeTabId).toBe(firstTabId)
+    expect(controller.phase).toBe('awaiting_reply')
+    expect(controller.pending).toBe(true)
+    expect(
+      controller.entries.some(
+        (entry) =>
+          entry.kind === 'text' &&
+          entry.role === 'assistant' &&
+          entry.content.includes('Hidden tab chunk.'),
+      ),
+    ).toBe(true)
+  })
+
   it('blocks duplicate sends while the active tab is creating its first conversation', async () => {
     const create = deferredPromise<{
       conversation: { id: string; providerId: string; lastActivityAt: string }
