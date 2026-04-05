@@ -613,8 +613,8 @@ func buildSkillRefinementSystemPrompt(skillDir string) string {
 			"- Operate only inside the current workspace.\n"+
 			"- The skill bundle being edited is located at %s.\n"+
 			"- You must edit the real files under that directory directly instead of only giving advice.\n"+
-			"- You must run verification commands yourself; if you did not run them, you cannot claim \"verified\".\n"+
-			"- If you find failures, fix them and retry. Return \"blocked\" only after confirming the task cannot be completed.\n"+
+			"- You must run verification commands yourself; if you did not run them, you cannot claim \\\"verified\\\".\n"+
+			"- If you find failures, fix them and retry. Return \\\"blocked\\\" only after confirming the task cannot be completed.\n"+
 			"- Output exactly one JSON object at the end, with no extra explanation.\n\n"+
 			"Final JSON shape:\n"+
 			"{\"type\":\"skill_refinement_result\",\"status\":\"verified|blocked\",\"summary\":\"one-line summary\",\"verification_notes\":\"summary of key verification steps\",\"failure_reason\":\"required when blocked\"}\n",
