@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import http.cookiejar
 import json
 import os
 import sys
@@ -8,8 +9,6 @@ import time
 import urllib.error
 import urllib.request
 from typing import Any
-
-CHAT_USER_HEADER = "X-OpenASE-Chat-User"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,8 +29,17 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_opener() -> urllib.request.OpenerDirector:
+    return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
+
 def request_json(
-    base_url: str, method: str, path: str, payload=None, headers: dict[str, str] | None = None
+    opener: urllib.request.OpenerDirector,
+    base_url: str,
+    method: str,
+    path: str,
+    payload=None,
+    headers: dict[str, str] | None = None,
 ):
     body = None
     request_headers = {"Accept": "application/json"}
@@ -48,7 +56,7 @@ def request_json(
         method=method,
     )
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with opener.open(request, timeout=20) as response:
             raw = response.read().decode("utf-8")
             return json.loads(raw)
     except urllib.error.HTTPError as exc:
@@ -85,12 +93,14 @@ def resolve_chat_providers(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     )
 
 
-def wait_for_chat_providers(base_url: str, org_id: str, timeout_seconds: int) -> list[dict[str, Any]]:
+def wait_for_chat_providers(
+    opener: urllib.request.OpenerDirector, base_url: str, org_id: str, timeout_seconds: int
+) -> list[dict[str, Any]]:
     deadline = time.time() + timeout_seconds
     last_providers: list[dict[str, Any]] = []
 
     while time.time() < deadline:
-        providers = request_json(base_url, "GET", f"/api/v1/orgs/{org_id}/providers")["providers"]
+        providers = request_json(opener, base_url, "GET", f"/api/v1/orgs/{org_id}/providers")["providers"]
         last_providers = providers
         try:
             return resolve_chat_providers(providers)
@@ -132,13 +142,13 @@ def read_sse_stream(response, timeout_seconds: int):
 
 
 def start_chat_turn(
+    opener: urllib.request.OpenerDirector,
     base_url: str,
     timeout_seconds: int,
     payload: dict[str, Any],
     *,
     headers: dict[str, str] | None = None,
     require_text: bool = True,
-    require_action_proposal: bool = False,
 ) -> dict[str, Any]:
     request_headers = {
         "Accept": "text/event-stream",
@@ -154,9 +164,8 @@ def start_chat_turn(
     )
 
     text_parts: list[str] = []
-    action_proposals: list[dict[str, Any]] = []
     done_payload = None
-    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+    with opener.open(request, timeout=timeout_seconds) as response:
         for event_name, event_payload in read_sse_stream(response, timeout_seconds):
             if event_name == "error":
                 raise RuntimeError(
@@ -164,8 +173,6 @@ def start_chat_turn(
                 )
             if event_name == "message" and event_payload.get("type") == "text":
                 text_parts.append(str(event_payload.get("content", "")))
-            if event_name == "message" and event_payload.get("type") == "action_proposal":
-                action_proposals.append(event_payload)
             if event_name == "done":
                 done_payload = event_payload
                 break
@@ -173,8 +180,6 @@ def start_chat_turn(
     assistant_text = "".join(text_parts)
     if require_text and not assistant_text.strip():
         raise RuntimeError("expected chat stream to emit a non-empty assistant text message")
-    if require_action_proposal and not action_proposals:
-        raise RuntimeError("expected chat stream to emit at least one action_proposal event")
     if not isinstance(done_payload, dict):
         raise RuntimeError("expected chat stream to emit a done event")
     session_id = str(done_payload.get("session_id", "")).strip()
@@ -185,18 +190,23 @@ def start_chat_turn(
 
     return {
         "assistant_text": assistant_text,
-        "action_proposals": action_proposals,
         "done": done_payload,
     }
 
 
-def close_chat_session(base_url: str, timeout_seconds: int, session_id: str, headers: dict[str, str]) -> None:
+def close_chat_session(
+    opener: urllib.request.OpenerDirector,
+    base_url: str,
+    timeout_seconds: int,
+    session_id: str,
+    headers: dict[str, str],
+) -> None:
     close_request = urllib.request.Request(
         base_url + f"/api/v1/chat/{session_id}",
         headers={"Accept": "application/json", **headers},
         method="DELETE",
     )
-    with urllib.request.urlopen(close_request, timeout=timeout_seconds) as response:
+    with opener.open(close_request, timeout=timeout_seconds) as response:
         if response.status != 204:
             raise RuntimeError(
                 f"expected DELETE /api/v1/chat/{session_id} to return 204, got {response.status}"
@@ -204,6 +214,7 @@ def close_chat_session(base_url: str, timeout_seconds: int, session_id: str, hea
 
 
 def expect_resume_failure(
+    opener: urllib.request.OpenerDirector,
     base_url: str,
     timeout_seconds: int,
     payload: dict[str, Any],
@@ -222,7 +233,7 @@ def expect_resume_failure(
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=timeout_seconds):
+        with opener.open(request, timeout=timeout_seconds):
             raise RuntimeError("expected chat resume request to fail")
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
@@ -236,14 +247,19 @@ def main() -> int:
     args = build_parser().parse_args()
     base_url = args.base_url.rstrip("/")
     stamp = time.strftime("%Y%m%d%H%M%S")
-    chat_headers = {CHAT_USER_HEADER: f"blackbox-user-{stamp}"}
+    opener = build_opener()
+    chat_headers: dict[str, str] = {}
 
     print(f"[1/10] health check against {base_url}")
-    request_json(base_url, "GET", "/healthz")
-    request_json(base_url, "GET", "/api/v1/healthz")
+    request_json(opener, base_url, "GET", "/healthz")
+    request_json(opener, base_url, "GET", "/api/v1/healthz")
+    print(f"[1/9] health check against {base_url}")
+    request_json(opener, base_url, "GET", "/healthz")
+    request_json(opener, base_url, "GET", "/api/v1/healthz")
 
-    print("[2/10] create isolated organization and project")
+    print("[2/9] create isolated organization and project")
     org = request_json(
+        opener,
         base_url,
         "POST",
         "/api/v1/orgs",
@@ -253,6 +269,7 @@ def main() -> int:
         },
     )["organization"]
     project = request_json(
+        opener,
         base_url,
         "POST",
         f"/api/v1/orgs/{org['id']}/projects",
@@ -265,12 +282,13 @@ def main() -> int:
         },
     )["project"]
 
-    print("[3/10] wait for available Ephemeral Chat providers")
-    chat_providers = wait_for_chat_providers(base_url, org["id"], args.timeout_seconds)
+    print("[3/9] wait for available Ephemeral Chat providers")
+    chat_providers = wait_for_chat_providers(opener, base_url, org["id"], args.timeout_seconds)
     default_chat_provider = chat_providers[0]
 
-    print("[4/10] set the selected provider as the default project provider")
+    print("[4/9] set the selected provider as the default project provider")
     project = request_json(
+        opener,
         base_url,
         "PATCH",
         f"/api/v1/projects/{project['id']}",
@@ -279,8 +297,9 @@ def main() -> int:
         },
     )["project"]
 
-    print("[5/10] create a ticket for ticket-detail chat coverage")
+    print("[5/9] create a ticket for ticket-detail chat coverage")
     ticket = request_json(
+        opener,
         base_url,
         "POST",
         f"/api/v1/projects/{project['id']}/tickets",
@@ -290,7 +309,7 @@ def main() -> int:
         },
     )["ticket"]
 
-    print("[6/10] run explicit-provider project-sidebar coverage against every available provider")
+    print("[6/9] run explicit-provider project-sidebar coverage against every available provider")
     explicit_results: list[dict[str, Any]] = []
     for provider in chat_providers:
         explicit_payload = {
@@ -305,14 +324,16 @@ def main() -> int:
             "session_id": None,
         }
         explicit_result = start_chat_turn(
+            opener,
             base_url,
             args.timeout_seconds,
             explicit_payload,
             headers=chat_headers,
         )
         explicit_session_id = str(explicit_result["done"].get("session_id", "")).strip()
-        close_chat_session(base_url, args.timeout_seconds, explicit_session_id, chat_headers)
+        close_chat_session(opener, base_url, args.timeout_seconds, explicit_session_id, chat_headers)
         expect_resume_failure(
+            opener,
             base_url,
             args.timeout_seconds,
             {**explicit_payload, "session_id": explicit_session_id},
@@ -328,7 +349,7 @@ def main() -> int:
             }
         )
 
-    print("[7/10] verify same-user replacement closes the previous session deterministically")
+    print("[7/9] verify same-user replacement closes the previous session deterministically")
     replacement_first_payload = {
         "message": "Reply with one short sentence for the first replacement-session probe.",
         "source": "project_sidebar",
@@ -339,6 +360,7 @@ def main() -> int:
         "session_id": None,
     }
     replacement_first = start_chat_turn(
+        opener,
         base_url,
         args.timeout_seconds,
         replacement_first_payload,
@@ -356,6 +378,7 @@ def main() -> int:
         "session_id": None,
     }
     replacement_second = start_chat_turn(
+        opener,
         base_url,
         args.timeout_seconds,
         replacement_second_payload,
@@ -365,6 +388,7 @@ def main() -> int:
     if replacement_first_session == replacement_second_session:
         raise RuntimeError("expected replacement session to allocate a new session id")
     expect_resume_failure(
+        opener,
         base_url,
         args.timeout_seconds,
         {**replacement_first_payload, "session_id": replacement_first_session},
@@ -372,9 +396,9 @@ def main() -> int:
         404,
         "CHAT_SESSION_NOT_FOUND",
     )
-    close_chat_session(base_url, args.timeout_seconds, replacement_second_session, chat_headers)
+    close_chat_session(opener, base_url, args.timeout_seconds, replacement_second_session, chat_headers)
 
-    print("[8/10] start ticket-detail chat with explicit provider selection")
+    print("[8/9] start ticket-detail chat with explicit provider selection")
     ticket_payload = {
         "message": "Reply with one short sentence confirming this ticket-detail chat is working.",
         "source": "ticket_detail",
@@ -385,10 +409,11 @@ def main() -> int:
         },
         "session_id": None,
     }
-    ticket_result = start_chat_turn(base_url, args.timeout_seconds, ticket_payload, headers=chat_headers)
+    ticket_result = start_chat_turn(opener, base_url, args.timeout_seconds, ticket_payload, headers=chat_headers)
     ticket_session_id = str(ticket_result["done"].get("session_id", "")).strip()
-    close_chat_session(base_url, args.timeout_seconds, ticket_session_id, chat_headers)
+    close_chat_session(opener, base_url, args.timeout_seconds, ticket_session_id, chat_headers)
     expect_resume_failure(
+        opener,
         base_url,
         args.timeout_seconds,
         {**ticket_payload, "session_id": ticket_session_id},
@@ -397,7 +422,7 @@ def main() -> int:
         "CHAT_SESSION_NOT_FOUND",
     )
 
-    print("[9/10] start project-sidebar chat via default-provider fallback and cover action_proposal")
+    print("[9/9] start project-sidebar chat via default-provider fallback")
     fallback_payload = {
         "message": "Reply with one short sentence confirming default provider fallback works.",
         "source": "project_sidebar",
@@ -407,14 +432,16 @@ def main() -> int:
         "session_id": None,
     }
     fallback_result = start_chat_turn(
+        opener,
         base_url,
         args.timeout_seconds,
         fallback_payload,
         headers=chat_headers,
     )
     fallback_session_id = str(fallback_result["done"].get("session_id", "")).strip()
-    close_chat_session(base_url, args.timeout_seconds, fallback_session_id, chat_headers)
+    close_chat_session(opener, base_url, args.timeout_seconds, fallback_session_id, chat_headers)
     expect_resume_failure(
+        opener,
         base_url,
         args.timeout_seconds,
         {**fallback_payload, "session_id": fallback_session_id},
@@ -423,29 +450,7 @@ def main() -> int:
         "CHAT_SESSION_NOT_FOUND",
     )
 
-    action_payload = {
-        "message": (
-            "Create one child ticket titled 'Blackbox action proposal child' and respond only with the action_proposal JSON."
-        ),
-        "source": "project_sidebar",
-        "provider_id": default_chat_provider["id"],
-        "context": {
-            "project_id": project["id"],
-        },
-        "session_id": None,
-    }
-    action_result = start_chat_turn(
-        base_url,
-        args.timeout_seconds,
-        action_payload,
-        headers=chat_headers,
-        require_text=False,
-        require_action_proposal=True,
-    )
-    action_session_id = str(action_result["done"].get("session_id", "")).strip()
-    close_chat_session(base_url, args.timeout_seconds, action_session_id, chat_headers)
-
-    print("[10/10] summarize results")
+    print("[9/9] summarize results")
 
     print(
         json.dumps(
@@ -468,7 +473,6 @@ def main() -> int:
                     "assistant_text": fallback_result["assistant_text"],
                     "done": fallback_result["done"],
                 },
-                "action_proposal": action_result,
             },
             indent=2,
             ensure_ascii=False,

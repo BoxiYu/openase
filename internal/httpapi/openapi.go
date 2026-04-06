@@ -101,9 +101,6 @@ type OpenAPIMachine struct {
 	ExecutionMode         string                          `json:"execution_mode"`
 	ExecutionCapabilities []string                        `json:"execution_capabilities,omitempty"`
 	SSHHelperEnabled      bool                            `json:"ssh_helper_enabled"`
-	SSHHelperRequired     bool                            `json:"ssh_helper_required"`
-	ConnectionMode        string                          `json:"connection_mode"`
-	TransportCapabilities []string                        `json:"transport_capabilities,omitempty"`
 	SSHUser               *string                         `json:"ssh_user,omitempty"`
 	SSHKeyPath            *string                         `json:"ssh_key_path,omitempty"`
 	AdvertisedEndpoint    *string                         `json:"advertised_endpoint,omitempty"`
@@ -190,8 +187,6 @@ type OpenAPIAgentProvider struct {
 
 type OpenAPIAgentProviderCapabilities struct {
 	EphemeralChat OpenAPIAgentProviderCapability `json:"ephemeral_chat"`
-	HarnessAI     OpenAPIAgentProviderCapability `json:"harness_ai"`
-	SkillAI       OpenAPIAgentProviderCapability `json:"skill_ai"`
 }
 
 type OpenAPIAgentProviderCapability struct {
@@ -460,6 +455,7 @@ type OpenAPIProjectConversation struct {
 	Source         string `json:"source"`
 	ProviderID     string `json:"provider_id"`
 	Status         string `json:"status"`
+	Title          string `json:"title"`
 	RollingSummary string `json:"rolling_summary"`
 	LastActivityAt string `json:"last_activity_at"`
 	CreatedAt      string `json:"created_at"`
@@ -528,7 +524,8 @@ type OpenAPIProjectConversationTurn struct {
 }
 
 type OpenAPIProjectConversationTurnResponse struct {
-	Turn OpenAPIProjectConversationTurn `json:"turn"`
+	Turn         OpenAPIProjectConversationTurn `json:"turn"`
+	Conversation OpenAPIProjectConversation     `json:"conversation"`
 }
 
 type OpenAPIProjectConversationInterruptResponse struct {
@@ -545,11 +542,6 @@ type OpenAPIProjectConversationInterruptResponse struct {
 
 type OpenAPIProjectConversationInterruptEnvelope struct {
 	Interrupt OpenAPIProjectConversationInterruptResponse `json:"interrupt"`
-}
-
-type OpenAPIProjectConversationActionProposalExecutionResponse struct {
-	ResultEntry OpenAPIProjectConversationEntry `json:"result_entry"`
-	Results     []map[string]any                `json:"results"`
 }
 
 type OpenAPIAgentOutputEntry struct {
@@ -1488,8 +1480,6 @@ type OpenAPIDeleteSkillResponse struct {
 	DeletedSkillID string `json:"deleted_skill_id"`
 }
 
-type OpenAPISkillRefinementRequest rawSkillRefinementRequest
-
 type OpenAPIRolesResponse struct {
 	Roles []OpenAPIBuiltinRole `json:"roles"`
 }
@@ -1781,12 +1771,9 @@ var (
 		"host":                              "Hostname or address used to reach the machine.",
 		"port":                              "Transport-specific port used to connect to the machine.",
 		"reachability_mode":                 "Reachability topology for the machine: local, direct_connect, or reverse_connect.",
-		"execution_mode":                    "Execution path currently used by this record: local_process or websocket. Older records may still surface as ssh_compat until they are migrated.",
+		"execution_mode":                    "Execution path currently used by this record: local_process or websocket.",
 		"execution_capabilities":            "Runtime execution capabilities derived from the actually implemented path for this machine record.",
 		"ssh_helper_enabled":                "Whether SSH helper credentials are configured for bootstrap or diagnostics.",
-		"ssh_helper_required":               "Whether this record still reflects legacy ssh_compat state that should be migrated to websocket.",
-		"connection_mode":                   "Legacy compatibility field derived from reachability_mode and execution_mode. New clients should prefer the separated fields.",
-		"transport_capabilities":            "Legacy compatibility alias for execution_capabilities.",
 		"ssh_user":                          "SSH helper username used for bootstrap, diagnostics, or emergency repair access.",
 		"ssh_key_path":                      "Path to the SSH private key used for SSH helper bootstrap, diagnostics, or emergency repair access.",
 		"advertised_endpoint":               "Direct-connect websocket endpoint advertised by the machine when execution_mode is websocket and reachability_mode is direct_connect.",
@@ -1868,8 +1855,6 @@ var (
 		"role_description":        "Structured workflow role summary shown in runtime and editor context.",
 		"platform_access_allowed": "Allowed OpenASE platform API scopes for agents running this workflow.",
 		"skill_names":             "Skill names to bind to the workflow when it is created.",
-		"created_by":              "Optional creator descriptor recorded on the initial workflow harness version.",
-		"edited_by":               "Optional editor descriptor recorded on subsequent workflow harness versions.",
 		"pickup_status_ids":       "Ticket status IDs that allow the workflow to pick up tickets.",
 		"finish_status_ids":       "Ticket status IDs that mark workflow completion.",
 		"is_active":               "Whether the workflow is active and eligible to pick up work.",
@@ -1882,8 +1867,7 @@ var (
 		"hooks":                   "Workflow hook configuration keyed by lifecycle phase.",
 	}
 	openAPIHarnessContentDescriptions = map[string]string{
-		"content":   "Harness content to write or validate.",
-		"edited_by": "Optional editor descriptor recorded on the published workflow harness version.",
+		"content": "Harness content to write or validate.",
 	}
 	openAPIScheduledJobDescriptions = map[string]string{
 		"name":            "Human-readable scheduled job name.",
@@ -1904,38 +1888,31 @@ var (
 		"repo_scopes[].branch_name": "Optional work-branch override for the scoped repository. When omitted or blank, OpenASE uses the generated ticket branch.",
 		"parent_ticket_id":          "Optional parent ticket ID for hierarchical ticket relationships.",
 		"external_ref":              "Optional external reference string associated with the ticket.",
-		"created_by":                "Actor identifier recorded as the creator of the ticket.",
 		"budget_usd":                "Optional budget limit for the ticket in USD.",
 	}
 	openAPITicketCommentRequestDescriptions = map[string]string{
-		"body":       "Markdown body content for the ticket comment.",
-		"created_by": "Actor identifier recorded as the creator of the comment.",
+		"body": "Markdown body content for the ticket comment.",
 	}
 	openAPITicketCommentPatchDescriptions = map[string]string{
 		"body":        "Updated markdown body content for the ticket comment.",
-		"edited_by":   "Actor identifier recorded as the editor of the comment.",
 		"edit_reason": "Reason recorded for editing the comment.",
 	}
 	openAPIProjectUpdateThreadRequestDescriptions = map[string]string{
-		"status":     "Current delivery status for the update thread. Supported values are on_track, at_risk, and off_track.",
-		"title":      "Optional human-readable project update title. When omitted, the server derives it from the first 100 body characters at a word boundary.",
-		"body":       "Required markdown body content for the project update thread.",
-		"created_by": "Actor identifier recorded as the creator of the update thread.",
+		"status": "Current delivery status for the update thread. Supported values are on_track, at_risk, and off_track.",
+		"title":  "Optional human-readable project update title. When omitted, the server derives it from the first 100 body characters at a word boundary.",
+		"body":   "Required markdown body content for the project update thread.",
 	}
 	openAPIProjectUpdateThreadPatchDescriptions = map[string]string{
 		"status":      "Updated delivery status for the update thread. Supported values are on_track, at_risk, and off_track.",
 		"title":       "Optional updated human-readable project update title. When omitted, the server derives it from the first 100 body characters at a word boundary.",
 		"body":        "Required updated markdown body content for the project update thread.",
-		"edited_by":   "Actor identifier recorded as the editor of the update thread.",
 		"edit_reason": "Reason recorded for editing the update thread.",
 	}
 	openAPIProjectUpdateCommentRequestDescriptions = map[string]string{
-		"body":       "Markdown body content for the project update comment.",
-		"created_by": "Actor identifier recorded as the creator of the update comment.",
+		"body": "Markdown body content for the project update comment.",
 	}
 	openAPIProjectUpdateCommentPatchDescriptions = map[string]string{
 		"body":        "Updated markdown body content for the project update comment.",
-		"edited_by":   "Actor identifier recorded as the editor of the update comment.",
 		"edit_reason": "Reason recorded for editing the update comment.",
 	}
 	openAPIDependencyRequestDescriptions = map[string]string{
@@ -2081,7 +2058,6 @@ var (
 		"name":        "Project-unique skill name in the control plane.",
 		"content":     "Skill markdown content. Frontmatter is optional on input and will be normalized on write.",
 		"description": "Optional description used when the input content does not declare one.",
-		"created_by":  "Optional creator descriptor such as user:gary or agent:codex-01 via ASE-42.",
 		"is_enabled":  "Whether the new skill should be enabled for runtime injection immediately.",
 	}
 	openAPISkillUpdateDescriptions = map[string]string{
@@ -2097,16 +2073,6 @@ var (
 		"workspace_root": "Workspace repository root that owns the agent skill directory.",
 		"adapter_type":   "Agent adapter type used to derive the runtime skill directory.",
 		"workflow_id":    "Optional workflow ID used to project only the currently bound enabled skills.",
-	}
-	openAPISkillRefinementDescriptions = map[string]string{
-		"project_id":             "Project ID that owns the skill draft and provider selection.",
-		"message":                "Requested improvement goal that Codex should fix and verify against the current draft bundle.",
-		"provider_id":            "Optional provider ID. Phase 1 supports Codex-backed refinement only.",
-		"files":                  "Current draft skill bundle files from the editor.",
-		"files[].path":           "Bundle-relative file path using forward slashes.",
-		"files[].content_base64": "Base64-encoded file bytes for this draft bundle entry.",
-		"files[].media_type":     "Optional media type persisted with the file entry.",
-		"files[].is_executable":  "Whether the projected file should be marked executable at runtime.",
 	}
 	openAPISkillBindingTargetDescriptions = map[string]string{
 		"workflow_ids": "Workflow IDs that should bind or unbind this skill.",
@@ -2132,8 +2098,8 @@ var (
 		"PATCH /api/v1/agents/{agentId}":                                                               openAPIAgentRequestDescriptions,
 		"POST /api/v1/projects/{projectId}/workflows":                                                  openAPIWorkflowRequestDescriptions,
 		"PATCH /api/v1/workflows/{workflowId}":                                                         mergeRequestFieldDescriptions(openAPIWorkflowRequestDescriptions, map[string]string{"harness_content": ""}),
-		"POST /api/v1/workflows/{workflowId}/retire":                                                   map[string]string{"edited_by": openAPIWorkflowRequestDescriptions["edited_by"]},
-		"POST /api/v1/workflows/{workflowId}/replace-references":                                       map[string]string{"replacement_workflow_id": "Workflow ID that should receive replaceable scheduled job and active ticket references.", "edited_by": openAPIWorkflowRequestDescriptions["edited_by"]},
+		"POST /api/v1/workflows/{workflowId}/retire":                                                   map[string]string{},
+		"POST /api/v1/workflows/{workflowId}/replace-references":                                       map[string]string{"replacement_workflow_id": "Workflow ID that should receive replaceable scheduled job and active ticket references."},
 		"PUT /api/v1/workflows/{workflowId}/harness":                                                   openAPIHarnessContentDescriptions,
 		"POST /api/v1/harness/validate":                                                                openAPIHarnessContentDescriptions,
 		"POST /api/v1/projects/{projectId}/scheduled-jobs":                                             openAPIScheduledJobDescriptions,
@@ -2166,7 +2132,6 @@ var (
 		"PUT /api/v1/skills/{skillId}":                                                                 openAPISkillUpdateDescriptions,
 		"POST /api/v1/skills/{skillId}/bind":                                                           openAPISkillBindingTargetDescriptions,
 		"POST /api/v1/skills/{skillId}/unbind":                                                         openAPISkillBindingTargetDescriptions,
-		"POST /api/v1/skills/{skillId}/refinement-runs":                                                openAPISkillRefinementDescriptions,
 		"POST /api/v1/workflows/{workflowId}/skills/bind":                                              openAPISkillBindingDescriptions,
 		"POST /api/v1/workflows/{workflowId}/skills/unbind":                                            openAPISkillBindingDescriptions,
 	}
@@ -4168,51 +4133,6 @@ func (b openAPISpecBuilder) addWorkflowOperations() error {
 	}
 	unbindSkill.AddParameter(uuidPathParameter("skillId", "Skill ID."))
 	b.doc.AddOperation("/api/v1/skills/{skillId}/unbind", http.MethodPost, unbindSkill)
-
-	refinementRunStart, err := b.streamOperation(
-		"startSkillRefinement",
-		"Start a Codex-backed skill fix-and-verify refinement run",
-		[]string{"skills"},
-		http.StatusBadRequest,
-		http.StatusNotFound,
-		http.StatusConflict,
-		http.StatusInternalServerError,
-	)
-	if err != nil {
-		return err
-	}
-	refinementBodyRef, err := b.schemaRef(OpenAPISkillRefinementRequest{})
-	if err != nil {
-		return err
-	}
-	refinementRunStart.RequestBody = &openapi3.RequestBodyRef{
-		Value: openapi3.NewRequestBody().
-			WithDescription("Skill fix-and-verify refinement request body.").
-			WithJSONSchemaRef(refinementBodyRef).
-			WithRequired(true),
-	}
-	refinementRunStart.AddParameter(uuidPathParameter("skillId", "Skill ID."))
-	b.doc.AddOperation("/api/v1/skills/{skillId}/refinement-runs", http.MethodPost, refinementRunStart)
-
-	refinementRunDelete := openapi3.NewOperation()
-	refinementRunDelete.OperationID = "closeSkillRefinementRun"
-	refinementRunDelete.Summary = "Close a skill refinement run and clean up its temporary workspace"
-	refinementRunDelete.Tags = []string{"skills"}
-	refinementRunDelete.Responses = openapi3.NewResponsesWithCapacity(3)
-	refinementRunDelete.AddResponse(http.StatusNoContent, openapi3.NewResponse().WithDescription("Skill refinement run closed."))
-	for _, code := range []int{http.StatusBadRequest, http.StatusNotFound, http.StatusInternalServerError} {
-		errorResponse, err := b.errorResponse(code)
-		if err != nil {
-			return err
-		}
-		refinementRunDelete.AddResponse(code, errorResponse)
-	}
-	refinementRunDelete.AddParameter(openapi3.NewPathParameter("sessionId").
-		WithDescription("Skill refinement session ID.").
-		WithRequired(true).
-		WithSchema(openapi3.NewStringSchema()),
-	)
-	b.doc.AddOperation("/api/v1/skills/refinement-runs/{sessionId}", http.MethodDelete, refinementRunDelete)
 
 	bindSkills, err := b.jsonOperation(
 		"bindWorkflowSkills",

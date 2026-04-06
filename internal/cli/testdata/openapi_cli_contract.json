@@ -1,5 +1,5 @@
 {
-  "openapi_sha256": "f12b214f4de060ba590e81abba170c6d6e34c4d296d6f93cb50f95e282cd6210",
+  "openapi_sha256": "d5bd6f739a8455138c42130da491ad0611b1d8fa04d40d5d7d78beda0c0d6bd9",
   "commands": [
     {
       "use": "list [projectId]",
@@ -104,11 +104,6 @@
           "kind": "float64"
         },
         {
-          "name": "created_by",
-          "description": "Actor identifier recorded as the creator of the ticket.",
-          "kind": "string"
-        },
-        {
           "name": "description",
           "description": "Ticket description or problem statement.",
           "kind": "string"
@@ -176,11 +171,6 @@
           "name": "budget_usd",
           "description": "Optional budget limit for the ticket in USD.",
           "kind": "float64"
-        },
-        {
-          "name": "created_by",
-          "description": "Actor identifier recorded as the creator of the ticket.",
-          "kind": "string"
         },
         {
           "name": "description",
@@ -303,11 +293,6 @@
           "name": "body",
           "description": "Markdown body content for the ticket comment.",
           "kind": "string"
-        },
-        {
-          "name": "created_by",
-          "description": "Actor identifier recorded as the creator of the comment.",
-          "kind": "string"
         }
       ]
     },
@@ -343,11 +328,6 @@
         {
           "name": "edit_reason",
           "description": "Reason recorded for editing the comment.",
-          "kind": "string"
-        },
-        {
-          "name": "edited_by",
-          "description": "Actor identifier recorded as the editor of the comment.",
           "kind": "string"
         }
       ]
@@ -1227,12 +1207,7 @@
       "body_fields": [
         {
           "name": "body",
-          "description": "Markdown body content for the project update thread.",
-          "kind": "string"
-        },
-        {
-          "name": "created_by",
-          "description": "Actor identifier recorded as the creator of the update thread.",
+          "description": "Required markdown body content for the project update thread.",
           "kind": "string"
         },
         {
@@ -1242,7 +1217,7 @@
         },
         {
           "name": "title",
-          "description": "Human-readable project update title.",
+          "description": "Optional human-readable project update title. When omitted, the server derives it from the first 100 body characters at a word boundary.",
           "kind": "string"
         }
       ]
@@ -1273,17 +1248,12 @@
       "body_fields": [
         {
           "name": "body",
-          "description": "Updated markdown body content for the project update thread.",
+          "description": "Required updated markdown body content for the project update thread.",
           "kind": "string"
         },
         {
           "name": "edit_reason",
           "description": "Reason recorded for editing the update thread.",
-          "kind": "string"
-        },
-        {
-          "name": "edited_by",
-          "description": "Actor identifier recorded as the editor of the update thread.",
           "kind": "string"
         },
         {
@@ -1293,7 +1263,7 @@
         },
         {
           "name": "title",
-          "description": "Updated human-readable project update title.",
+          "description": "Optional updated human-readable project update title. When omitted, the server derives it from the first 100 body characters at a word boundary.",
           "kind": "string"
         }
       ]
@@ -1768,11 +1738,6 @@
           "kind": "string"
         },
         {
-          "name": "created_by",
-          "description": "Optional creator descriptor recorded on the initial workflow harness version.",
-          "kind": "string"
-        },
-        {
           "name": "finish_status_ids",
           "description": "Ticket status IDs that mark workflow completion.",
           "kind": "string_slice"
@@ -1874,11 +1839,6 @@
         {
           "name": "agent_id",
           "description": "Agent ID assigned to execute this workflow.",
-          "kind": "string"
-        },
-        {
-          "name": "edited_by",
-          "description": "Optional editor descriptor recorded on subsequent workflow harness versions.",
           "kind": "string"
         },
         {
@@ -2024,11 +1984,6 @@
         {
           "name": "content",
           "description": "Harness content to write or validate.",
-          "kind": "string"
-        },
-        {
-          "name": "edited_by",
-          "description": "Optional editor descriptor recorded on the published workflow harness version.",
           "kind": "string"
         }
       ]
@@ -2233,11 +2188,6 @@
           "kind": "string"
         },
         {
-          "name": "connection_mode",
-          "description": "Legacy compatibility field derived from reachability_mode and execution_mode. New clients should prefer the separated fields.",
-          "kind": "string"
-        },
-        {
           "name": "description",
           "description": "Human-readable machine description.",
           "kind": "string"
@@ -2264,7 +2214,7 @@
         },
         {
           "name": "execution_mode",
-          "description": "Execution path currently used by this record: local_process or websocket. Older records may still surface as ssh_compat until they are migrated.",
+          "description": "Execution path currently used by this record: local_process or websocket.",
           "kind": "string"
         },
         {
@@ -2306,11 +2256,6 @@
           "name": "status",
           "description": "Machine lifecycle status value.",
           "kind": "string"
-        },
-        {
-          "name": "transport_capabilities",
-          "description": "Legacy compatibility alias for execution_capabilities.",
-          "kind": "string_slice"
         },
         {
           "name": "workspace_root",
@@ -2347,11 +2292,6 @@
           "kind": "string"
         },
         {
-          "name": "connection_mode",
-          "description": "Legacy compatibility field derived from reachability_mode and execution_mode. New clients should prefer the separated fields.",
-          "kind": "string"
-        },
-        {
           "name": "description",
           "description": "Human-readable machine description.",
           "kind": "string"
@@ -2378,7 +2318,7 @@
         },
         {
           "name": "execution_mode",
-          "description": "Execution path currently used by this record: local_process or websocket. Older records may still surface as ssh_compat until they are migrated.",
+          "description": "Execution path currently used by this record: local_process or websocket.",
           "kind": "string"
         },
         {
@@ -2420,11 +2360,6 @@
           "name": "status",
           "description": "Machine lifecycle status value.",
           "kind": "string"
-        },
-        {
-          "name": "transport_capabilities",
-          "description": "Legacy compatibility alias for execution_capabilities.",
-          "kind": "string_slice"
         },
         {
           "name": "workspace_root",
@@ -3203,11 +3138,6 @@
         {
           "name": "content",
           "description": "Skill markdown content. Frontmatter is optional on input and will be normalized on write.",
-          "kind": "string"
-        },
-        {
-          "name": "created_by",
-          "description": "Optional creator descriptor such as user:gary or agent:codex-01 via ASE-42.",
           "kind": "string"
         },
         {

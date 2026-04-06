@@ -9,6 +9,7 @@ const { closeChatSession, streamChatTurn } = vi.hoisted(() => ({
 vi.mock('$lib/api/chat', () => ({
   closeChatSession,
   streamChatTurn,
+  watchProjectConversationMuxStream: vi.fn(),
 }))
 
 import type { AgentProvider } from '$lib/api/contracts'
@@ -57,7 +58,7 @@ async function sendMessage(prompt: HTMLElement, message: string) {
   await fireEvent.keyDown(prompt, { key: 'Enter' })
 }
 
-describe('EphemeralChatPanel legacy proposal handling', () => {
+describe('EphemeralChatPanel assistant text rendering', () => {
   beforeAll(() => {
     HTMLElement.prototype.scrollIntoView ??= vi.fn()
     HTMLElement.prototype.hasPointerCapture ??= vi.fn(() => false)
@@ -74,7 +75,7 @@ describe('EphemeralChatPanel legacy proposal handling', () => {
     vi.clearAllMocks()
   })
 
-  it('renders proposal stream payloads as plain assistant text without confirm controls', async () => {
+  it('renders plain assistant text without confirm controls', async () => {
     streamChatTurn.mockImplementation(async (_request, handlers) => {
       handlers.onEvent({
         kind: 'session',

@@ -1055,13 +1055,14 @@ func TestProjectConversationStartTurnResumesClaudeSessionOverSSHWithoutRecoveryP
 				},
 			},
 			machine: catalogdomain.Machine{
-				ID:            machineID,
-				Name:          "builder-01",
-				Host:          "10.0.1.15",
-				Port:          22,
-				SSHUser:       &sshUser,
-				SSHKeyPath:    &sshKeyPath,
-				WorkspaceRoot: stringPointer(workspaceRoot),
+				ID:             machineID,
+				Name:           "builder-01",
+				Host:           "10.0.1.15",
+				Port:           22,
+				ConnectionMode: catalogdomain.MachineConnectionModeSSH,
+				SSHUser:        &sshUser,
+				SSHKeyPath:     &sshKeyPath,
+				WorkspaceRoot:  stringPointer(workspaceRoot),
 			},
 		},
 		fakeTicketReader{},
@@ -1193,13 +1194,14 @@ func TestProjectConversationRespondInterruptRestoresCodexSessionOverSSHWhenRunti
 				},
 			},
 			machine: catalogdomain.Machine{
-				ID:            machineID,
-				Name:          "builder-01",
-				Host:          "10.0.1.15",
-				Port:          22,
-				SSHUser:       &sshUser,
-				SSHKeyPath:    &sshKeyPath,
-				WorkspaceRoot: stringPointer(workspaceRoot),
+				ID:             machineID,
+				Name:           "builder-01",
+				Host:           "10.0.1.15",
+				Port:           22,
+				ConnectionMode: catalogdomain.MachineConnectionModeSSH,
+				SSHUser:        &sshUser,
+				SSHKeyPath:     &sshKeyPath,
+				WorkspaceRoot:  stringPointer(workspaceRoot),
 			},
 		},
 		fakeTicketReader{},
@@ -1446,13 +1448,14 @@ func TestProjectConversationRespondInterruptResumesClaudeSessionOverSSHAndContin
 				},
 			},
 			machine: catalogdomain.Machine{
-				ID:            machineID,
-				Name:          "builder-01",
-				Host:          "10.0.1.15",
-				Port:          22,
-				SSHUser:       &sshUser,
-				SSHKeyPath:    &sshKeyPath,
-				WorkspaceRoot: stringPointer(workspaceRoot),
+				ID:             machineID,
+				Name:           "builder-01",
+				Host:           "10.0.1.15",
+				Port:           22,
+				ConnectionMode: catalogdomain.MachineConnectionModeSSH,
+				SSHUser:        &sshUser,
+				SSHKeyPath:     &sshKeyPath,
+				WorkspaceRoot:  stringPointer(workspaceRoot),
 			},
 		},
 		fakeTicketReader{},
@@ -1591,6 +1594,87 @@ func TestProjectConversationConsumeTurnPersistsProviderTurnIDOnCompletion(t *tes
 	}
 }
 
+func TestProjectConversationConsumeTurnKeepsStableTitleWhenRollingSummaryUpdates(t *testing.T) {
+	t.Parallel()
+
+	client := openTestEntClient(t)
+	ctx := context.Background()
+	org, project := createProjectConversationTestProject(ctx, t, client)
+	repoStore := chatrepo.NewEntRepository(client)
+	providerID := uuid.New()
+	conversation, err := repoStore.CreateConversation(ctx, chatdomain.CreateConversation{
+		ProjectID:  project.ID,
+		UserID:     "user:conversation",
+		Source:     chatdomain.SourceProjectSidebar,
+		ProviderID: providerID,
+	})
+	if err != nil {
+		t.Fatalf("create conversation: %v", err)
+	}
+	turn, _, err := repoStore.CreateTurnWithUserEntry(
+		ctx,
+		conversation.ID,
+		"Keep this first sentence as the permanent title. Later summaries may change.",
+	)
+	if err != nil {
+		t.Fatalf("create turn: %v", err)
+	}
+	if _, err := repoStore.AppendEntry(ctx, conversation.ID, &turn.ID, chatdomain.EntryKindAssistantTextDelta, map[string]any{
+		"role":    "assistant",
+		"content": "Done. I updated the summary context.",
+	}); err != nil {
+		t.Fatalf("append assistant entry: %v", err)
+	}
+
+	service := NewProjectConversationService(nil, repoStore, fakeProjectConversationCatalog{
+		fakeCatalogReader: fakeCatalogReader{
+			project: catalogdomain.Project{
+				ID:             project.ID,
+				OrganizationID: org.ID,
+				Name:           "OpenASE",
+				Slug:           "openase",
+			},
+		},
+	}, fakeTicketReader{}, harnessWorkflowReader{}, nil, nil)
+
+	events := make(chan StreamEvent, 1)
+	events <- StreamEvent{Event: "done", Payload: donePayload{SessionID: conversation.ID.String()}}
+	close(events)
+
+	service.consumeTurn(
+		ctx,
+		conversation,
+		turn,
+		&liveProjectConversation{
+			codex: &fakeProjectConversationCodexRuntime{
+				anchor: RuntimeSessionAnchor{
+					ProviderThreadID:          "thread-1",
+					LastTurnID:                "provider-turn-1",
+					ProviderThreadStatus:      "idle",
+					ProviderThreadActiveFlags: []string{},
+				},
+			},
+		},
+		chatdomain.ProjectConversationRun{},
+		TurnStream{Events: events},
+	)
+
+	reloadedConversation, err := repoStore.GetConversation(ctx, conversation.ID)
+	if err != nil {
+		t.Fatalf("reload conversation: %v", err)
+	}
+	if got, want := reloadedConversation.Title.String(), "Keep this first sentence as the permanent title."; got != want {
+		t.Fatalf("conversation title = %q, want %q", got, want)
+	}
+	if !containsAll(
+		reloadedConversation.RollingSummary,
+		"user: Keep this first sentence as the permanent title. Later summaries may change.",
+		"assistant: Done. I updated the summary context.",
+	) {
+		t.Fatalf("rolling summary = %q", reloadedConversation.RollingSummary)
+	}
+}
+
 func TestProjectConversationConsumeTurnAutoReleasesCompletedRuntime(t *testing.T) {
 	t.Parallel()
 
@@ -1667,7 +1751,10 @@ func TestProjectConversationConsumeTurnAutoReleasesCompletedRuntime(t *testing.T
 			},
 		},
 	}, fakeTicketReader{}, harnessWorkflowReader{}, nil, nil)
-	watched, cleanup := service.WatchConversation(ctx, conversation.ID)
+	watched, cleanup, err := service.WatchConversation(ctx, UserID("user:conversation"), conversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation() error = %v", err)
+	}
 	initial := requireProjectConversationStreamEvent(t, watched)
 	if initial.Event != "session" {
 		t.Fatalf("initial event = %q, want session", initial.Event)
@@ -2150,7 +2237,10 @@ func TestProjectConversationWatchConversationSessionIncludesProviderAnchors(t *t
 	}
 
 	service := NewProjectConversationService(nil, repoStore, nil, nil, nil, nil, nil)
-	events, cleanup := service.WatchConversation(ctx, conversation.ID)
+	events, cleanup, err := service.WatchConversation(ctx, UserID("user:conversation"), conversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation() error = %v", err)
+	}
 	defer cleanup()
 
 	first := <-events
@@ -2215,7 +2305,10 @@ func TestProjectConversationWatchConversationSessionDistinguishesClaudeSessionAn
 			},
 		},
 	}, nil, nil, nil, nil)
-	events, cleanup := service.WatchConversation(ctx, conversation.ID)
+	events, cleanup, err := service.WatchConversation(ctx, UserID("user:conversation"), conversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation() error = %v", err)
+	}
 	defer cleanup()
 
 	first := <-events
@@ -2269,9 +2362,15 @@ func TestProjectConversationWatchConversationIsolatesEventsPerConversation(t *te
 	}
 
 	service := NewProjectConversationService(nil, repoStore, nil, nil, nil, nil, nil)
-	firstEvents, cleanupFirst := service.WatchConversation(ctx, firstConversation.ID)
+	firstEvents, cleanupFirst, err := service.WatchConversation(ctx, UserID("user:conversation"), firstConversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation(first) error = %v", err)
+	}
 	defer cleanupFirst()
-	secondEvents, cleanupSecond := service.WatchConversation(ctx, secondConversation.ID)
+	secondEvents, cleanupSecond, err := service.WatchConversation(ctx, UserID("user:conversation"), secondConversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation(second) error = %v", err)
+	}
 	defer cleanupSecond()
 
 	if event := requireProjectConversationStreamEvent(t, firstEvents); event.Event != "session" {
@@ -2281,12 +2380,12 @@ func TestProjectConversationWatchConversationIsolatesEventsPerConversation(t *te
 		t.Fatalf("second watcher initial event = %q, want session", event.Event)
 	}
 
-	_, err = service.AppendActionExecutionResult(
+	_, err = service.AppendSystemEntry(
 		ctx,
 		UserID("user:conversation"),
 		firstConversation.ID,
 		nil,
-		map[string]any{"marker": "conversation-1"},
+		testTaskNotificationPayload("conversation-1"),
 	)
 	if err != nil {
 		t.Fatalf("append action result: %v", err)
@@ -2300,12 +2399,12 @@ func TestProjectConversationWatchConversationIsolatesEventsPerConversation(t *te
 	if !ok {
 		t.Fatalf("expected message payload map, got %#v", delivered.Payload)
 	}
-	if payload["type"] != "action_result" {
-		t.Fatalf("first watcher payload type = %#v, want action_result", payload["type"])
+	if payload["type"] != "task_notification" {
+		t.Fatalf("first watcher payload type = %#v, want task_notification", payload["type"])
 	}
-	nested, ok := payload["payload"].(map[string]any)
+	nested, ok := payload["raw"].(map[string]any)
 	if !ok || nested["marker"] != "conversation-1" {
-		t.Fatalf("first watcher payload = %#v, want marker conversation-1", payload["payload"])
+		t.Fatalf("first watcher payload = %#v, want marker conversation-1", payload["raw"])
 	}
 
 	requireNoProjectConversationStreamEvent(t, secondEvents)
@@ -2330,8 +2429,14 @@ func TestProjectConversationWatchConversationFansOutToAllWatchers(t *testing.T) 
 	}
 
 	service := NewProjectConversationService(nil, repoStore, nil, nil, nil, nil, nil)
-	firstWatcher, cleanupFirst := service.WatchConversation(ctx, conversation.ID)
-	secondWatcher, cleanupSecond := service.WatchConversation(ctx, conversation.ID)
+	firstWatcher, cleanupFirst, err := service.WatchConversation(ctx, UserID("user:conversation"), conversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation(first) error = %v", err)
+	}
+	secondWatcher, cleanupSecond, err := service.WatchConversation(ctx, UserID("user:conversation"), conversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation(second) error = %v", err)
+	}
 	defer cleanupSecond()
 	defer func() {
 		if cleanupFirst != nil {
@@ -2346,12 +2451,12 @@ func TestProjectConversationWatchConversationFansOutToAllWatchers(t *testing.T) 
 		t.Fatalf("second watcher initial event = %q, want session", event.Event)
 	}
 
-	_, err = service.AppendActionExecutionResult(
+	_, err = service.AppendSystemEntry(
 		ctx,
 		UserID("user:conversation"),
 		conversation.ID,
 		nil,
-		map[string]any{"marker": "fanout-1"},
+		testTaskNotificationPayload("fanout-1"),
 	)
 	if err != nil {
 		t.Fatalf("append first action result: %v", err)
@@ -2369,20 +2474,20 @@ func TestProjectConversationWatchConversationFansOutToAllWatchers(t *testing.T) 
 		if !ok {
 			t.Fatalf("%s watcher payload = %#v, want map", name, delivered.Payload)
 		}
-		nested, ok := payload["payload"].(map[string]any)
+		nested, ok := payload["raw"].(map[string]any)
 		if !ok || nested["marker"] != "fanout-1" {
-			t.Fatalf("%s watcher payload = %#v, want marker fanout-1", name, payload["payload"])
+			t.Fatalf("%s watcher payload = %#v, want marker fanout-1", name, payload["raw"])
 		}
 	}
 
 	cleanupFirst()
 	cleanupFirst = nil
-	_, err = service.AppendActionExecutionResult(
+	_, err = service.AppendSystemEntry(
 		ctx,
 		UserID("user:conversation"),
 		conversation.ID,
 		nil,
-		map[string]any{"marker": "fanout-2"},
+		testTaskNotificationPayload("fanout-2"),
 	)
 	if err != nil {
 		t.Fatalf("append second action result: %v", err)
@@ -2393,9 +2498,9 @@ func TestProjectConversationWatchConversationFansOutToAllWatchers(t *testing.T) 
 	if delivered.Event != "message" || !ok {
 		t.Fatalf("remaining watcher event = %+v, want message payload", delivered)
 	}
-	nested, ok := payload["payload"].(map[string]any)
+	nested, ok := payload["raw"].(map[string]any)
 	if !ok || nested["marker"] != "fanout-2" {
-		t.Fatalf("remaining watcher payload = %#v, want marker fanout-2", payload["payload"])
+		t.Fatalf("remaining watcher payload = %#v, want marker fanout-2", payload["raw"])
 	}
 }
 
@@ -2427,11 +2532,20 @@ func TestProjectConversationWatchConversationBlockedWatcherDoesNotBlockOthers(t 
 	}
 
 	service := NewProjectConversationService(nil, repoStore, nil, nil, nil, nil, nil)
-	blockedWatcher, cleanupBlocked := service.WatchConversation(ctx, firstConversation.ID)
+	blockedWatcher, cleanupBlocked, err := service.WatchConversation(ctx, UserID("user:conversation"), firstConversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation(blocked) error = %v", err)
+	}
 	defer cleanupBlocked()
-	activeWatcher, cleanupActive := service.WatchConversation(ctx, firstConversation.ID)
+	activeWatcher, cleanupActive, err := service.WatchConversation(ctx, UserID("user:conversation"), firstConversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation(active) error = %v", err)
+	}
 	defer cleanupActive()
-	otherConversationWatcher, cleanupOther := service.WatchConversation(ctx, secondConversation.ID)
+	otherConversationWatcher, cleanupOther, err := service.WatchConversation(ctx, UserID("user:conversation"), secondConversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation(other) error = %v", err)
+	}
 	defer cleanupOther()
 
 	requireProjectConversationStreamEvent(t, blockedWatcher)
@@ -2440,11 +2554,8 @@ func TestProjectConversationWatchConversationBlockedWatcherDoesNotBlockOthers(t 
 
 	for index := range projectConversationStreamBufferSize {
 		service.broadcast(firstConversation.ID, StreamEvent{
-			Event: "message",
-			Payload: map[string]any{
-				"type":    "action_result",
-				"payload": map[string]any{"marker": fmt.Sprintf("buffer-%d", index)},
-			},
+			Event:   "message",
+			Payload: testTaskNotificationPayload(fmt.Sprintf("buffer-%d", index)),
 		})
 
 		delivered := requireProjectConversationStreamEvent(t, activeWatcher)
@@ -2452,18 +2563,15 @@ func TestProjectConversationWatchConversationBlockedWatcherDoesNotBlockOthers(t 
 		if delivered.Event != "message" || !ok {
 			t.Fatalf("active watcher event = %+v, want message payload", delivered)
 		}
-		nested, ok := payload["payload"].(map[string]any)
+		nested, ok := payload["raw"].(map[string]any)
 		if !ok || nested["marker"] != fmt.Sprintf("buffer-%d", index) {
-			t.Fatalf("active watcher payload = %#v, want marker buffer-%d", payload["payload"], index)
+			t.Fatalf("active watcher payload = %#v, want marker buffer-%d", payload["raw"], index)
 		}
 	}
 
 	service.broadcast(firstConversation.ID, StreamEvent{
-		Event: "message",
-		Payload: map[string]any{
-			"type":    "action_result",
-			"payload": map[string]any{"marker": "after-blocked"},
-		},
+		Event:   "message",
+		Payload: testTaskNotificationPayload("after-blocked"),
 	})
 
 	delivered := requireProjectConversationStreamEvent(t, activeWatcher)
@@ -2471,17 +2579,14 @@ func TestProjectConversationWatchConversationBlockedWatcherDoesNotBlockOthers(t 
 	if delivered.Event != "message" || !ok {
 		t.Fatalf("active watcher event after blocked = %+v, want message payload", delivered)
 	}
-	nested, ok := payload["payload"].(map[string]any)
+	nested, ok := payload["raw"].(map[string]any)
 	if !ok || nested["marker"] != "after-blocked" {
-		t.Fatalf("active watcher payload after blocked = %#v, want marker after-blocked", payload["payload"])
+		t.Fatalf("active watcher payload after blocked = %#v, want marker after-blocked", payload["raw"])
 	}
 
 	service.broadcast(secondConversation.ID, StreamEvent{
-		Event: "message",
-		Payload: map[string]any{
-			"type":    "action_result",
-			"payload": map[string]any{"marker": "other-conversation"},
-		},
+		Event:   "message",
+		Payload: testTaskNotificationPayload("other-conversation"),
 	})
 
 	otherDelivered := requireProjectConversationStreamEvent(t, otherConversationWatcher)
@@ -2489,9 +2594,9 @@ func TestProjectConversationWatchConversationBlockedWatcherDoesNotBlockOthers(t 
 	if otherDelivered.Event != "message" || !ok {
 		t.Fatalf("other conversation watcher event = %+v, want message payload", otherDelivered)
 	}
-	otherNested, ok := otherPayload["payload"].(map[string]any)
+	otherNested, ok := otherPayload["raw"].(map[string]any)
 	if !ok || otherNested["marker"] != "other-conversation" {
-		t.Fatalf("other conversation watcher payload = %#v, want marker other-conversation", otherPayload["payload"])
+		t.Fatalf("other conversation watcher payload = %#v, want marker other-conversation", otherPayload["raw"])
 	}
 
 	overflowDelivered := false
@@ -2501,7 +2606,7 @@ func TestProjectConversationWatchConversationBlockedWatcherDoesNotBlockOthers(t 
 		if !ok {
 			continue
 		}
-		nested, ok := payload["payload"].(map[string]any)
+		nested, ok := payload["raw"].(map[string]any)
 		if ok && nested["marker"] == "after-blocked" {
 			overflowDelivered = true
 		}
@@ -2573,12 +2678,12 @@ func TestProjectConversationWatchProjectConversationsIsolatesByProjectAndUser(t 
 	}
 	requireNoProjectConversationMuxEvent(t, events)
 
-	if _, err := service.AppendActionExecutionResult(
+	if _, err := service.AppendSystemEntry(
 		ctx,
 		UserID("user:conversation"),
 		firstConversation.ID,
 		nil,
-		map[string]any{"marker": "first-project"},
+		testTaskNotificationPayload("first-project"),
 	); err != nil {
 		t.Fatalf("append first action result: %v", err)
 	}
@@ -2587,21 +2692,21 @@ func TestProjectConversationWatchProjectConversationsIsolatesByProjectAndUser(t 
 		t.Fatalf("delivered mux event = %+v, want first conversation message", delivered)
 	}
 
-	if _, err := service.AppendActionExecutionResult(
+	if _, err := service.AppendSystemEntry(
 		ctx,
 		UserID("user:other"),
 		secondConversation.ID,
 		nil,
-		map[string]any{"marker": "wrong-user"},
+		testTaskNotificationPayload("wrong-user"),
 	); err != nil {
 		t.Fatalf("append second action result: %v", err)
 	}
-	if _, err := service.AppendActionExecutionResult(
+	if _, err := service.AppendSystemEntry(
 		ctx,
 		UserID("user:conversation"),
 		thirdConversation.ID,
 		nil,
-		map[string]any{"marker": "wrong-project"},
+		testTaskNotificationPayload("wrong-project"),
 	); err != nil {
 		t.Fatalf("append third action result: %v", err)
 	}
@@ -2649,12 +2754,12 @@ func TestProjectConversationWatchProjectConversationsFansOutToAllWatchers(t *tes
 	requireProjectConversationMuxEvent(t, firstWatcher)
 	requireProjectConversationMuxEvent(t, secondWatcher)
 
-	if _, err := service.AppendActionExecutionResult(
+	if _, err := service.AppendSystemEntry(
 		ctx,
 		UserID("user:conversation"),
 		conversation.ID,
 		nil,
-		map[string]any{"marker": "mux-fanout"},
+		testTaskNotificationPayload("mux-fanout"),
 	); err != nil {
 		t.Fatalf("append action result: %v", err)
 	}
@@ -2768,7 +2873,10 @@ func TestProjectConversationConsumeTurnPersistsThreadStatusAndProtocolEvents(t *
 			},
 		},
 	}, fakeTicketReader{}, harnessWorkflowReader{}, nil, nil)
-	watched, cleanup := service.WatchConversation(ctx, conversation.ID)
+	watched, cleanup, err := service.WatchConversation(ctx, UserID("user:conversation"), conversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation() error = %v", err)
+	}
 
 	streamEvents := make(chan StreamEvent, 5)
 	streamEvents <- StreamEvent{
@@ -2913,7 +3021,10 @@ func TestProjectConversationConsumeTurnPersistsInterruptAndSummary(t *testing.T)
 	}
 
 	service := NewProjectConversationService(nil, repo, nil, nil, nil, nil, nil)
-	events, cleanup := service.WatchConversation(ctx, conversation.ID)
+	events, cleanup, err := service.WatchConversation(ctx, UserID("user:conversation"), conversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation() error = %v", err)
+	}
 
 	streamEvents := make(chan StreamEvent, 3)
 	streamEvents <- StreamEvent{
@@ -3217,7 +3328,10 @@ func TestProjectConversationRespondInterruptRoutesExactRequestID(t *testing.T) {
 	service := NewProjectConversationService(nil, repo, nil, nil, nil, nil, nil)
 	codexRuntime := &fakeProjectConversationCodexRuntime{}
 	service.runtimeManager.live[conversation.ID] = &liveProjectConversation{codex: codexRuntime}
-	events, cleanup := service.WatchConversation(ctx, conversation.ID)
+	events, cleanup, err := service.WatchConversation(ctx, UserID("user:conversation"), conversation.ID)
+	if err != nil {
+		t.Fatalf("WatchConversation() error = %v", err)
+	}
 
 	resolved, err := service.RespondInterrupt(
 		ctx,
@@ -4457,6 +4571,15 @@ func requireNoProjectConversationStreamEvent(t *testing.T, events <-chan StreamE
 	}
 }
 
+func testTaskNotificationPayload(marker string) map[string]any {
+	return map[string]any{
+		"type": "task_notification",
+		"raw": map[string]any{
+			"marker": marker,
+		},
+	}
+}
+
 func requireProjectConversationMuxEvent(
 	t *testing.T,
 	events <-chan ProjectConversationMuxEvent,
@@ -4754,6 +4877,91 @@ type projectConversationWorkspaceRepoFixture struct {
 	name             string
 	workspaceDirname string
 	files            map[string]string
+}
+
+func TestProjectConversationServiceListConversationsUsesStableLocalPrincipal(t *testing.T) {
+	t.Parallel()
+
+	client := openTestEntClient(t)
+	ctx := context.Background()
+	_, project := createProjectConversationTestProject(ctx, t, client)
+	repoStore := chatrepo.NewEntRepository(client)
+
+	firstConversation, err := repoStore.CreateConversation(ctx, chatdomain.CreateConversation{
+		ProjectID:  project.ID,
+		UserID:     "browser-user-a",
+		Source:     chatdomain.SourceProjectSidebar,
+		ProviderID: uuid.New(),
+	})
+	if err != nil {
+		t.Fatalf("create first conversation: %v", err)
+	}
+	secondConversation, err := repoStore.CreateConversation(ctx, chatdomain.CreateConversation{
+		ProjectID:  project.ID,
+		UserID:     "browser-user-b",
+		Source:     chatdomain.SourceProjectSidebar,
+		ProviderID: uuid.New(),
+	})
+	if err != nil {
+		t.Fatalf("create second conversation: %v", err)
+	}
+
+	service := NewProjectConversationService(nil, repoStore, nil, nil, nil, nil, nil)
+	items, err := service.ListConversations(ctx, LocalProjectConversationUserID, project.ID, nil)
+	if err != nil {
+		t.Fatalf("ListConversations() error = %v", err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("ListConversations() returned %d conversations, want 2", len(items))
+	}
+	for _, item := range items {
+		if item.UserID != LocalProjectConversationUserID.String() {
+			t.Fatalf("conversation %s user_id = %q, want %q", item.ID, item.UserID, LocalProjectConversationUserID)
+		}
+	}
+
+	reloadedFirst, err := repoStore.GetConversation(ctx, firstConversation.ID)
+	if err != nil {
+		t.Fatalf("GetConversation(first) error = %v", err)
+	}
+	if reloadedFirst.UserID != LocalProjectConversationUserID.String() {
+		t.Fatalf("first conversation user_id = %q, want %q", reloadedFirst.UserID, LocalProjectConversationUserID)
+	}
+	reloadedSecond, err := repoStore.GetConversation(ctx, secondConversation.ID)
+	if err != nil {
+		t.Fatalf("GetConversation(second) error = %v", err)
+	}
+	if reloadedSecond.UserID != LocalProjectConversationUserID.String() {
+		t.Fatalf("second conversation user_id = %q, want %q", reloadedSecond.UserID, LocalProjectConversationUserID)
+	}
+}
+
+func TestProjectConversationServiceGetConversationUsesStableLocalPrincipal(t *testing.T) {
+	t.Parallel()
+
+	client := openTestEntClient(t)
+	ctx := context.Background()
+	_, project := createProjectConversationTestProject(ctx, t, client)
+	repoStore := chatrepo.NewEntRepository(client)
+
+	conversation, err := repoStore.CreateConversation(ctx, chatdomain.CreateConversation{
+		ProjectID:  project.ID,
+		UserID:     "browser-user-a",
+		Source:     chatdomain.SourceProjectSidebar,
+		ProviderID: uuid.New(),
+	})
+	if err != nil {
+		t.Fatalf("create conversation: %v", err)
+	}
+
+	service := NewProjectConversationService(nil, repoStore, nil, nil, nil, nil, nil)
+	got, err := service.GetConversation(ctx, LocalProjectConversationUserID, conversation.ID)
+	if err != nil {
+		t.Fatalf("GetConversation() error = %v", err)
+	}
+	if got.UserID != LocalProjectConversationUserID.String() {
+		t.Fatalf("GetConversation().UserID = %q, want %q", got.UserID, LocalProjectConversationUserID)
+	}
 }
 
 type projectConversationWorkspaceDiffFixture struct {

@@ -1603,23 +1603,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/api/v1/skills/refinement-runs/{sessionId}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    /** Close a skill refinement run and clean up its temporary workspace */
-    delete: operations['closeSkillRefinementRun']
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   '/api/v1/skills/{skillId}': {
     parameters: {
       query?: never
@@ -1718,23 +1701,6 @@ export interface paths {
     get: operations['getSkillHistory']
     put?: never
     post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v1/skills/{skillId}/refinement-runs': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /** Start a Codex-backed skill fix-and-verify refinement run */
-    post: operations['startSkillRefinement']
     delete?: never
     options?: never
     head?: never
@@ -3394,6 +3360,7 @@ export interface operations {
               rolling_summary?: string
               source?: string
               status?: string
+              title?: string
               updated_at?: string
               user_id?: string
             }[]
@@ -3478,6 +3445,7 @@ export interface operations {
               rolling_summary?: string
               source?: string
               status?: string
+              title?: string
               updated_at?: string
               user_id?: string
             }
@@ -3574,6 +3542,7 @@ export interface operations {
               rolling_summary?: string
               source?: string
               status?: string
+              title?: string
               updated_at?: string
               user_id?: string
             }
@@ -4137,6 +4106,19 @@ export interface operations {
         }
         content: {
           'application/json': {
+            conversation?: {
+              created_at?: string
+              id?: string
+              last_activity_at?: string
+              project_id?: string
+              provider_id?: string
+              rolling_summary?: string
+              source?: string
+              status?: string
+              title?: string
+              updated_at?: string
+              user_id?: string
+            }
             turn?: {
               id?: string
               status?: string
@@ -4580,7 +4562,6 @@ export interface operations {
                 kind?: string
                 token_id?: string | null
               }
-              connection_mode?: string
               daemon_status?: {
                 current_session_id?: string | null
                 last_registered_at?: string | null
@@ -4607,11 +4588,9 @@ export interface operations {
                 [key: string]: unknown
               }
               ssh_helper_enabled?: boolean
-              ssh_helper_required?: boolean
               ssh_key_path?: string | null
               ssh_user?: string | null
               status?: string
-              transport_capabilities?: string[]
               workspace_root?: string | null
             }
           }
@@ -4682,7 +4661,6 @@ export interface operations {
                 kind?: string
                 token_id?: string | null
               }
-              connection_mode?: string
               daemon_status?: {
                 current_session_id?: string | null
                 last_registered_at?: string | null
@@ -4709,11 +4687,9 @@ export interface operations {
                 [key: string]: unknown
               }
               ssh_helper_enabled?: boolean
-              ssh_helper_required?: boolean
               ssh_key_path?: string | null
               ssh_user?: string | null
               status?: string
-              transport_capabilities?: string[]
               workspace_root?: string | null
             }
           }
@@ -4796,8 +4772,6 @@ export interface operations {
             /** @description Opaque token identifier reserved for machine channel registration, distinct from runtime agent tokens. */
             token_id?: string | null
           } | null
-          /** @description Legacy compatibility field derived from reachability_mode and execution_mode. New clients should prefer the separated fields. */
-          connection_mode?: string | null
           /** @description Daemon registration and session metadata for websocket-capable machine transports. */
           daemon_status?: {
             /** @description Current daemon transport session identifier, when one is active. */
@@ -4819,7 +4793,7 @@ export interface operations {
           detection_status?: string | null
           /** @description Environment variable entries exported when work runs on the machine. */
           env_vars?: string[] | null
-          /** @description Execution path currently used by this record: local_process or websocket. Older records may still surface as ssh_compat until they are migrated. */
+          /** @description Execution path currently used by this record: local_process or websocket. */
           execution_mode?: string | null
           /** @description Hostname or address used to reach the machine. */
           host?: string | null
@@ -4837,8 +4811,6 @@ export interface operations {
           ssh_user?: string | null
           /** @description Machine lifecycle status value. */
           status?: string | null
-          /** @description Legacy compatibility alias for execution_capabilities. */
-          transport_capabilities?: string[] | null
           /** @description Filesystem root directory where ticket workspaces are created on the machine. */
           workspace_root?: string | null
         }
@@ -4860,7 +4832,6 @@ export interface operations {
                 kind?: string
                 token_id?: string | null
               }
-              connection_mode?: string
               daemon_status?: {
                 current_session_id?: string | null
                 last_registered_at?: string | null
@@ -4887,11 +4858,9 @@ export interface operations {
                 [key: string]: unknown
               }
               ssh_helper_enabled?: boolean
-              ssh_helper_required?: boolean
               ssh_key_path?: string | null
               ssh_user?: string | null
               status?: string
-              transport_capabilities?: string[]
               workspace_root?: string | null
             }
           }
@@ -4974,7 +4943,6 @@ export interface operations {
                 kind?: string
                 token_id?: string | null
               }
-              connection_mode?: string
               daemon_status?: {
                 current_session_id?: string | null
                 last_registered_at?: string | null
@@ -5001,11 +4969,9 @@ export interface operations {
                 [key: string]: unknown
               }
               ssh_helper_enabled?: boolean
-              ssh_helper_required?: boolean
               ssh_key_path?: string | null
               ssh_user?: string | null
               status?: string
-              transport_capabilities?: string[]
               workspace_root?: string | null
             }
           }
@@ -5173,7 +5139,6 @@ export interface operations {
                 kind?: string
                 token_id?: string | null
               }
-              connection_mode?: string
               daemon_status?: {
                 current_session_id?: string | null
                 last_registered_at?: string | null
@@ -5200,11 +5165,9 @@ export interface operations {
                 [key: string]: unknown
               }
               ssh_helper_enabled?: boolean
-              ssh_helper_required?: boolean
               ssh_key_path?: string | null
               ssh_user?: string | null
               status?: string
-              transport_capabilities?: string[]
               workspace_root?: string | null
             }
             probe?: {
@@ -6209,7 +6172,6 @@ export interface operations {
                 kind?: string
                 token_id?: string | null
               }
-              connection_mode?: string
               daemon_status?: {
                 current_session_id?: string | null
                 last_registered_at?: string | null
@@ -6236,11 +6198,9 @@ export interface operations {
                 [key: string]: unknown
               }
               ssh_helper_enabled?: boolean
-              ssh_helper_required?: boolean
               ssh_key_path?: string | null
               ssh_user?: string | null
               status?: string
-              transport_capabilities?: string[]
               workspace_root?: string | null
             }[]
           }
@@ -6311,8 +6271,6 @@ export interface operations {
             /** @description Opaque token identifier reserved for machine channel registration, distinct from runtime agent tokens. */
             token_id?: string | null
           } | null
-          /** @description Legacy compatibility field derived from reachability_mode and execution_mode. New clients should prefer the separated fields. */
-          connection_mode?: string
           /** @description Daemon registration and session metadata for websocket-capable machine transports. */
           daemon_status?: {
             /** @description Current daemon transport session identifier, when one is active. */
@@ -6334,7 +6292,7 @@ export interface operations {
           detection_status?: string
           /** @description Environment variable entries exported when work runs on the machine. */
           env_vars?: string[]
-          /** @description Execution path currently used by this record: local_process or websocket. Older records may still surface as ssh_compat until they are migrated. */
+          /** @description Execution path currently used by this record: local_process or websocket. */
           execution_mode?: string
           /** @description Hostname or address used to reach the machine. */
           host?: string
@@ -6352,8 +6310,6 @@ export interface operations {
           ssh_user?: string | null
           /** @description Machine lifecycle status value. */
           status?: string
-          /** @description Legacy compatibility alias for execution_capabilities. */
-          transport_capabilities?: string[]
           /** @description Filesystem root directory where ticket workspaces are created on the machine. */
           workspace_root?: string | null
         }
@@ -6375,7 +6331,6 @@ export interface operations {
                 kind?: string
                 token_id?: string | null
               }
-              connection_mode?: string
               daemon_status?: {
                 current_session_id?: string | null
                 last_registered_at?: string | null
@@ -6402,11 +6357,9 @@ export interface operations {
                 [key: string]: unknown
               }
               ssh_helper_enabled?: boolean
-              ssh_helper_required?: boolean
               ssh_key_path?: string | null
               ssh_user?: string | null
               status?: string
-              transport_capabilities?: string[]
               workspace_root?: string | null
             }
           }
@@ -6700,14 +6653,6 @@ export interface operations {
                   reason?: string | null
                   state?: string
                 }
-                harness_ai?: {
-                  reason?: string | null
-                  state?: string
-                }
-                skill_ai?: {
-                  reason?: string | null
-                  state?: string
-                }
               }
               cli_args?: string[]
               cli_command?: string
@@ -6947,14 +6892,6 @@ export interface operations {
               available?: boolean
               capabilities?: {
                 ephemeral_chat?: {
-                  reason?: string | null
-                  state?: string
-                }
-                harness_ai?: {
-                  reason?: string | null
-                  state?: string
-                }
-                skill_ai?: {
                   reason?: string | null
                   state?: string
                 }
@@ -10784,8 +10721,6 @@ export interface operations {
         'application/json': {
           /** @description Skill markdown content. Frontmatter is optional on input and will be normalized on write. */
           content?: string
-          /** @description Optional creator descriptor such as user:gary or agent:codex-01 via ASE-42. */
-          created_by?: string
           /** @description Optional description used when the input content does not declare one. */
           description?: string
           /** @description Whether the new skill should be enabled for runtime injection immediately. */
@@ -11362,8 +11297,6 @@ export interface operations {
            * @description Optional budget limit for the ticket in USD.
            */
           budget_usd?: number | null
-          /** @description Actor identifier recorded as the creator of the ticket. */
-          created_by?: string | null
           /** @description Ticket description or problem statement. */
           description?: string
           /** @description Optional external reference string associated with the ticket. */
@@ -12771,8 +12704,6 @@ export interface operations {
         'application/json': {
           /** @description Required markdown body content for the project update thread. */
           body?: string
-          /** @description Actor identifier recorded as the creator of the update thread. */
-          created_by?: string | null
           /** @description Current delivery status for the update thread. Supported values are on_track, at_risk, and off_track. */
           status?: string
           /** @description Optional human-readable project update title. When omitted, the server derives it from the first 100 body characters at a word boundary. */
@@ -12968,8 +12899,6 @@ export interface operations {
           body?: string
           /** @description Reason recorded for editing the update thread. */
           edit_reason?: string | null
-          /** @description Actor identifier recorded as the editor of the update thread. */
-          edited_by?: string | null
           /** @description Updated delivery status for the update thread. Supported values are on_track, at_risk, and off_track. */
           status?: string
           /** @description Optional updated human-readable project update title. When omitted, the server derives it from the first 100 body characters at a word boundary. */
@@ -13088,8 +13017,6 @@ export interface operations {
         'application/json': {
           /** @description Markdown body content for the project update comment. */
           body?: string
-          /** @description Actor identifier recorded as the creator of the update comment. */
-          created_by?: string | null
         }
       }
     }
@@ -13267,8 +13194,6 @@ export interface operations {
           body?: string
           /** @description Reason recorded for editing the update comment. */
           edit_reason?: string | null
-          /** @description Actor identifier recorded as the editor of the update comment. */
-          edited_by?: string | null
         }
       }
     }
@@ -13620,8 +13545,6 @@ export interface operations {
         'application/json': {
           /** @description Agent ID assigned to execute this workflow. */
           agent_id?: string
-          /** @description Optional creator descriptor recorded on the initial workflow harness version. */
-          created_by?: string | null
           /** @description Ticket status IDs that mark workflow completion. */
           finish_status_ids?: string[]
           /** @description Initial pure Markdown or Gonja harness body written into the versioned control-plane workflow record. */
@@ -13869,14 +13792,6 @@ export interface operations {
                   reason?: string | null
                   state?: string
                 }
-                harness_ai?: {
-                  reason?: string | null
-                  state?: string
-                }
-                skill_ai?: {
-                  reason?: string | null
-                  state?: string
-                }
               }
               cli_args?: string[]
               cli_command?: string
@@ -14116,14 +14031,6 @@ export interface operations {
               available?: boolean
               capabilities?: {
                 ephemeral_chat?: {
-                  reason?: string | null
-                  state?: string
-                }
-                harness_ai?: {
-                  reason?: string | null
-                  state?: string
-                }
-                skill_ai?: {
                   reason?: string | null
                   state?: string
                 }
@@ -14692,63 +14599,6 @@ export interface operations {
             }
           }
         }
-      }
-      /** @description Bad Request response. */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            code?: string
-            message?: string
-          }
-        }
-      }
-      /** @description Not Found response. */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            code?: string
-            message?: string
-          }
-        }
-      }
-      /** @description Internal Server Error response. */
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            code?: string
-            message?: string
-          }
-        }
-      }
-    }
-  }
-  closeSkillRefinementRun: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Skill refinement session ID. */
-        sessionId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Skill refinement run closed. */
-      204: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
       }
       /** @description Bad Request response. */
       400: {
@@ -15491,100 +15341,6 @@ export interface operations {
       }
     }
   }
-  startSkillRefinement: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Skill ID. */
-        skillId: string
-      }
-      cookie?: never
-    }
-    /** @description Skill fix-and-verify refinement request body. */
-    requestBody: {
-      content: {
-        'application/json': {
-          /** @description Current draft skill bundle files from the editor. */
-          files?: {
-            /** @description Base64-encoded file bytes for this draft bundle entry. */
-            content_base64?: string
-            /** @description Whether the projected file should be marked executable at runtime. */
-            is_executable?: boolean
-            /** @description Optional media type persisted with the file entry. */
-            media_type?: string
-            /** @description Bundle-relative file path using forward slashes. */
-            path?: string
-          }[]
-          /** @description Requested improvement goal that Codex should fix and verify against the current draft bundle. */
-          message?: string
-          /** @description Project ID that owns the skill draft and provider selection. */
-          project_id?: string
-          /** @description Optional provider ID. Phase 1 supports Codex-backed refinement only. */
-          provider_id?: string
-        }
-      }
-    }
-    responses: {
-      /** @description Server-sent events stream. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'text/event-stream': string
-        }
-      }
-      /** @description Bad Request response. */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            code?: string
-            message?: string
-          }
-        }
-      }
-      /** @description Not Found response. */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            code?: string
-            message?: string
-          }
-        }
-      }
-      /** @description Conflict response. */
-      409: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            code?: string
-            message?: string
-          }
-        }
-      }
-      /** @description Internal Server Error response. */
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            code?: string
-            message?: string
-          }
-        }
-      }
-    }
-  }
   unbindSkill: {
     parameters: {
       query?: never
@@ -16067,8 +15823,6 @@ export interface operations {
            * @description Optional budget limit for the ticket in USD.
            */
           budget_usd?: number | null
-          /** @description Actor identifier recorded as the creator of the ticket. */
-          created_by?: string | null
           /** @description Ticket description or problem statement. */
           description?: string | null
           /** @description Optional external reference string associated with the ticket. */
@@ -16310,8 +16064,6 @@ export interface operations {
         'application/json': {
           /** @description Markdown body content for the ticket comment. */
           body?: string
-          /** @description Actor identifier recorded as the creator of the comment. */
-          created_by?: string | null
         }
       }
     }
@@ -16462,8 +16214,6 @@ export interface operations {
           body?: string
           /** @description Reason recorded for editing the comment. */
           edit_reason?: string | null
-          /** @description Actor identifier recorded as the editor of the comment. */
-          edited_by?: string | null
         }
       }
     }
@@ -17350,8 +17100,6 @@ export interface operations {
         'application/json': {
           /** @description Agent ID assigned to execute this workflow. */
           agent_id?: string | null
-          /** @description Optional editor descriptor recorded on subsequent workflow harness versions. */
-          edited_by?: string | null
           /** @description Ticket status IDs that mark workflow completion. */
           finish_status_ids?: string[] | null
           /** @description Logical harness path tracked by the control plane for this workflow. */
@@ -17557,8 +17305,6 @@ export interface operations {
         'application/json': {
           /** @description Harness content to write or validate. */
           content?: string
-          /** @description Optional editor descriptor recorded on the published workflow harness version. */
-          edited_by?: string | null
         }
       }
     }
@@ -17818,8 +17564,6 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': {
-          /** @description Optional editor descriptor recorded on subsequent workflow harness versions. */
-          edited_by?: string | null
           /** @description Workflow ID that should receive replaceable scheduled job and active ticket references. */
           replacement_workflow_id?: string
         }
@@ -17918,10 +17662,7 @@ export interface operations {
     /** @description Retire a workflow by deactivating it request body. */
     requestBody: {
       content: {
-        'application/json': {
-          /** @description Optional editor descriptor recorded on subsequent workflow harness versions. */
-          edited_by?: string | null
-        }
+        'application/json': unknown
       }
     }
     responses: {
