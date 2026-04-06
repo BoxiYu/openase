@@ -111,6 +111,10 @@ type BrowserSession struct {
 	ID            uuid.UUID
 	UserID        uuid.UUID
 	SessionHash   string
+	DeviceKind    SessionDeviceKind
+	DeviceOS      string
+	DeviceBrowser string
+	DeviceLabel   string
 	ExpiresAt     time.Time
 	IdleExpiresAt time.Time
 	CSRFSecret    string
@@ -119,6 +123,38 @@ type BrowserSession struct {
 	RevokedAt     *time.Time
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+}
+
+type SessionDeviceKind string
+
+const (
+	SessionDeviceKindUnknown SessionDeviceKind = "unknown"
+	SessionDeviceKindDesktop SessionDeviceKind = "desktop"
+	SessionDeviceKindMobile  SessionDeviceKind = "mobile"
+	SessionDeviceKindTablet  SessionDeviceKind = "tablet"
+	SessionDeviceKindBot     SessionDeviceKind = "bot"
+)
+
+type AuthAuditEventType string
+
+const (
+	AuthAuditLoginSucceeded         AuthAuditEventType = "login.success"
+	AuthAuditLoginFailed            AuthAuditEventType = "login.failed"
+	AuthAuditLogout                 AuthAuditEventType = "logout"
+	AuthAuditSessionRevoked         AuthAuditEventType = "session.revoked"
+	AuthAuditSessionExpired         AuthAuditEventType = "session.expired"
+	AuthAuditUserDisabledAfterLogin AuthAuditEventType = "user.disabled_after_login"
+)
+
+type AuthAuditEvent struct {
+	ID        uuid.UUID
+	UserID    *uuid.UUID
+	SessionID *uuid.UUID
+	ActorID   string
+	EventType AuthAuditEventType
+	Message   string
+	Metadata  map[string]any
+	CreatedAt time.Time
 }
 
 type RoleBinding struct {

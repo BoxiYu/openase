@@ -31,16 +31,32 @@ const {
   deleteOrganizationRoleBinding,
   deleteProjectRoleBinding,
   getEffectivePermissions,
+  getSessionGovernance,
   listOrganizationRoleBindings,
   listProjectRoleBindings,
+  logoutHumanSession,
+  revokeAllOtherAuthSessions,
+  revokeAuthSession,
 } = vi.hoisted(() => ({
   createOrganizationRoleBinding: vi.fn(),
   createProjectRoleBinding: vi.fn(),
   deleteOrganizationRoleBinding: vi.fn(),
   deleteProjectRoleBinding: vi.fn(),
   getEffectivePermissions: vi.fn(),
+  getSessionGovernance: vi.fn(),
   listOrganizationRoleBindings: vi.fn(),
   listProjectRoleBindings: vi.fn(),
+  logoutHumanSession: vi.fn(),
+  revokeAllOtherAuthSessions: vi.fn(),
+  revokeAuthSession: vi.fn(),
+}))
+
+const { goto } = vi.hoisted(() => ({
+  goto: vi.fn(),
+}))
+
+vi.mock('$app/navigation', () => ({
+  goto,
 }))
 
 vi.mock('$lib/api/openase', () => ({
@@ -57,8 +73,13 @@ vi.mock('$lib/api/auth', () => ({
   deleteOrganizationRoleBinding,
   deleteProjectRoleBinding,
   getEffectivePermissions,
+  getSessionGovernance,
   listOrganizationRoleBindings,
   listProjectRoleBindings,
+  logoutHumanSession,
+  normalizeReturnTo: vi.fn((value?: string | null) => value?.trim() || '/'),
+  revokeAllOtherAuthSessions,
+  revokeAuthSession,
 }))
 
 describe('Security settings', () => {
@@ -210,6 +231,41 @@ describe('Security settings', () => {
       },
     ])
     listProjectRoleBindings.mockResolvedValue([])
+    getSessionGovernance.mockResolvedValue({
+      authMode: 'oidc',
+      currentSessionID: 'session-current',
+      sessions: [
+        {
+          id: 'session-current',
+          current: true,
+          device: {
+            kind: 'desktop',
+            os: 'Linux',
+            browser: 'Firefox',
+            label: 'Firefox on Linux',
+          },
+          createdAt: '2026-04-04T10:00:00Z',
+          lastActiveAt: '2026-04-04T10:30:00Z',
+          expiresAt: '2026-04-04T18:00:00Z',
+          idleExpiresAt: '2026-04-04T11:00:00Z',
+        },
+      ],
+      auditEvents: [
+        {
+          id: 'audit-1',
+          eventType: 'login.success',
+          actorID: 'user:user-1',
+          message: 'Signed in via OIDC.',
+          metadata: {},
+          createdAt: '2026-04-04T10:00:00Z',
+        },
+      ],
+      stepUp: {
+        status: 'reserved',
+        summary: 'Reserved for future high-risk actions.',
+        supportedMethods: [],
+      },
+    })
     createOrganizationRoleBinding.mockResolvedValue({
       id: 'binding-2',
       scopeKind: 'organization',
@@ -221,7 +277,8 @@ describe('Security settings', () => {
       createdAt: '2026-04-04T10:00:00Z',
     })
 
-    const { findAllByPlaceholderText, findAllByRole, findByText } = render(SecuritySettings)
+    const { findAllByPlaceholderText, findAllByRole, findByText, findAllByText } =
+      render(SecuritySettings)
 
     expect(await findByText('Human access and RBAC')).toBeTruthy()
     expect(await findByText('Alice Control Plane')).toBeTruthy()
@@ -230,6 +287,9 @@ describe('Security settings', () => {
     expect(await findByText('org_admin')).toBeTruthy()
     expect(await findByText('project_admin')).toBeTruthy()
     expect(await findByText('Approval boundary')).toBeTruthy()
+    expect(await findByText('Session governance')).toBeTruthy()
+    expect((await findAllByText('Firefox on Linux')).length).toBeGreaterThan(0)
+    expect(await findByText('Login succeeded')).toBeTruthy()
     expect(await findByText('Stored rules')).toBeTruthy()
     expect(await findByText('reserved')).toBeTruthy()
 
