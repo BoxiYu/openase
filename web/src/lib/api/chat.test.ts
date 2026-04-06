@@ -61,11 +61,9 @@ describe('streamChatTurn', () => {
     await streamChatTurn(
       {
         message: 'Help me tighten this harness.',
-        source: 'harness_editor',
+        source: 'project_sidebar',
         context: {
           projectId: 'project-1',
-          workflowId: 'workflow-1',
-          harnessDraft: '---\nworkflow:\n  name: Draft\n---\n',
         },
       },
       {
@@ -101,14 +99,12 @@ describe('streamChatTurn', () => {
       expect.objectContaining({
         body: JSON.stringify({
           message: 'Help me tighten this harness.',
-          source: 'harness_editor',
+          source: 'project_sidebar',
           provider_id: undefined,
           session_id: undefined,
           context: {
             project_id: 'project-1',
-            workflow_id: 'workflow-1',
             ticket_id: undefined,
-            harness_draft: '---\nworkflow:\n  name: Draft\n---\n',
           },
         }),
       }),
@@ -121,14 +117,12 @@ describe('streamChatTurn', () => {
     await streamChatTurn(
       {
         message: 'Tighten this deploy script.',
-        source: 'skill_editor',
+        source: 'ticket_detail',
         providerId: 'provider-1',
         sessionId: 'session-skill-1',
         context: {
           projectId: 'project-1',
-          skillId: 'skill-1',
-          skillFilePath: 'scripts/redeploy.sh',
-          skillFileDraft: '#!/usr/bin/env bash\necho updated\n',
+          ticketId: 'ticket-1',
         },
       },
       {
@@ -141,17 +135,12 @@ describe('streamChatTurn', () => {
       expect.objectContaining({
         body: JSON.stringify({
           message: 'Tighten this deploy script.',
-          source: 'skill_editor',
+          source: 'ticket_detail',
           provider_id: 'provider-1',
           session_id: 'session-skill-1',
           context: {
             project_id: 'project-1',
-            workflow_id: undefined,
-            ticket_id: undefined,
-            harness_draft: undefined,
-            skill_id: 'skill-1',
-            skill_file_path: 'scripts/redeploy.sh',
-            skill_file_draft: '#!/usr/bin/env bash\necho updated\n',
+            ticket_id: 'ticket-1',
           },
         }),
       }),
@@ -201,12 +190,10 @@ describe('streamChatTurn', () => {
     await streamChatTurn(
       {
         message: 'Refactor this skill bundle.',
-        source: 'skill_editor',
+        source: 'ticket_detail',
         context: {
           projectId: 'project-1',
-          skillId: 'skill-1',
-          skillFilePath: 'SKILL.md',
-          skillFileDraft: '---\nname: "deploy"\n---\n',
+          ticketId: 'ticket-1',
         },
       },
       {
