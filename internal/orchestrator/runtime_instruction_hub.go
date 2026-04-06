@@ -115,6 +115,7 @@ func discoverInstructionHubSources(repo workspaceinfra.PreparedRepo) ([]instruct
 		return nil, fmt.Errorf("prepared repo %s is missing a path", strings.TrimSpace(repo.Name))
 	}
 
+	repoFS := os.DirFS(repoPath)
 	sources := make([]instructionHubSource, 0)
 	err := filepath.WalkDir(repoPath, func(currentPath string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -136,8 +137,7 @@ func discoverInstructionHubSources(repo workspaceinfra.PreparedRepo) ([]instruct
 		if err != nil {
 			return fmt.Errorf("derive relative path for %s: %w", currentPath, err)
 		}
-		// #nosec G304 -- instruction docs are discovered from orchestrator-managed prepared repo paths.
-		content, err := os.ReadFile(currentPath)
+		content, err := fs.ReadFile(repoFS, filepath.ToSlash(relativePath))
 		if err != nil {
 			return fmt.Errorf("read instruction doc %s: %w", currentPath, err)
 		}
