@@ -254,6 +254,58 @@ func TestWorkflowServiceCRUDHarnessStorageSkillsAndReload(t *testing.T) {
 	}
 }
 
+func TestWorkflowServiceShellQuotesRuntimeInterpolationInHooks(t *testing.T) {
+	ctx := context.Background()
+	client := openWorkflowTestEntClient(t)
+	repoRoot := createWorkflowTestGitRepo(t)
+	service := newWorkflowTestService(t, client, repoRoot)
+	fixture := seedWorkflowServiceFixture(ctx, t, client, repoRoot)
+
+	hooksRoot, err := workspaceinfra.ProjectHooksPath(repoRoot, fixture.projectID.String())
+	if err != nil {
+		t.Fatalf("ProjectHooksPath() error = %v", err)
+	}
+	safeMarkerPath := filepath.Join(hooksRoot, "safe.marker")
+	pwnedPath := filepath.Join(hooksRoot, "pwned")
+	maliciousWorkflowName := "foo; touch pwned #\nline two 'quoted' $(boom)"
+
+	workflowHooks := map[string]any{
+		"workflow_hooks": map[string]any{
+			"on_activate": []map[string]any{{
+				"cmd": "printf '%s' {{ workflow.name }} > safe.marker",
+			}},
+		},
+	}
+
+	created, err := service.Create(ctx, CreateInput{
+		ProjectID:           fixture.projectID,
+		AgentID:             fixture.agentID,
+		Name:                maliciousWorkflowName,
+		Type:                TypeCoding,
+		HarnessContent:      "# Coding\n",
+		Hooks:               workflowHooks,
+		MaxConcurrent:       1,
+		MaxRetryAttempts:    1,
+		TimeoutMinutes:      30,
+		StallTimeoutMinutes: 5,
+		IsActive:            true,
+		PickupStatusIDs:     MustStatusBindingSet(fixture.statusIDs["Todo"]),
+		FinishStatusIDs:     MustStatusBindingSet(fixture.statusIDs["Done"]),
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if created.Name != maliciousWorkflowName {
+		t.Fatalf("Create() name = %q, want %q", created.Name, maliciousWorkflowName)
+	}
+	if got := mustReadWorkflowFile(t, safeMarkerPath); got != maliciousWorkflowName {
+		t.Fatalf("safe marker = %q, want %q", got, maliciousWorkflowName)
+	}
+	if _, err := os.Stat(pwnedPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected %q to be absent, got err=%v", pwnedPath, err)
+	}
+}
+
 func TestRuntimeSnapshotMaterializationAndRecordedResolution(t *testing.T) {
 	ctx := context.Background()
 	client := openWorkflowTestEntClient(t)
@@ -302,16 +354,22 @@ func TestRuntimeSnapshotMaterializationAndRecordedResolution(t *testing.T) {
 	v1Skill := findRuntimeSkillSnapshot(t, snapshotV1.Skills, "runtime-skill")
 
 	codexRoot := t.TempDir()
-	materializedV1, err := service.MaterializeRuntimeSnapshot(MaterializeRuntimeSnapshotInput{
+	staleHarnessPath := filepath.Join(codexRoot, filepath.FromSlash(created.HarnessPath))
+	if err := os.MkdirAll(filepath.Dir(staleHarnessPath), 0o750); err != nil {
+		t.Fatalf("mkdir stale harness path: %v", err)
+	}
+	if err := os.WriteFile(staleHarnessPath, []byte("stale"), 0o600); err != nil {
+		t.Fatalf("seed stale harness snapshot: %v", err)
+	}
+	if _, err := service.MaterializeRuntimeSnapshot(MaterializeRuntimeSnapshotInput{
 		WorkspaceRoot: codexRoot,
 		AdapterType:   string(entagentprovider.AdapterTypeCodexAppServer),
 		Snapshot:      snapshotV1,
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatalf("MaterializeRuntimeSnapshot(codex) error = %v", err)
 	}
-	if _, err := os.Stat(materializedV1.HarnessPath); err != nil {
-		t.Fatalf("expected runtime harness snapshot: %v", err)
+	if _, err := os.Stat(staleHarnessPath); !os.IsNotExist(err) {
+		t.Fatalf("expected runtime harness snapshot to stay absent, stat err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(codexRoot, ".codex", "skills", "runtime-skill", "SKILL.md")); err != nil {
 		t.Fatalf("expected codex skill projection: %v", err)

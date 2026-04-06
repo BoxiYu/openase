@@ -297,14 +297,8 @@ Access {% for machine in accessible_machines %}{{ machine.name }}={{ machine.ssh
 	if workspaceScriptInfo.Mode()&0o111 == 0 {
 		t.Fatalf("expected codex workspace workpad helper to be executable, mode=%v", workspaceScriptInfo.Mode())
 	}
-	workspaceHarnessPath := filepath.Join(repoWorkspacePath, ".openase", "harnesses", "coding.md")
-	// #nosec G304 -- test reads a fixture from the temp workspace path created above.
-	workspaceHarnessContent, err := os.ReadFile(workspaceHarnessPath)
-	if err != nil {
-		t.Fatalf("read runtime harness snapshot: %v", err)
-	}
-	if !strings.Contains(string(workspaceHarnessContent), "Current {{ machine.name }} root={{ machine.workspace_root }}") {
-		t.Fatalf("expected runtime harness snapshot content, got %q", string(workspaceHarnessContent))
+	if _, err := os.Stat(filepath.Join(repoWorkspacePath, ".openase", "harnesses", "coding.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected runtime harness snapshot to stay absent, stat err=%v", err)
 	}
 	if _, err := os.Stat(filepath.Join(repoWorkspacePath, ".openase", "bin", "openase")); err != nil {
 		t.Fatalf("expected openase wrapper in codex workspace: %v", err)
@@ -4631,6 +4625,115 @@ func TestRuntimeLauncherRunTickTransitionsPauseRequestedAgentToPaused(t *testing
 	}
 	if runAfter.SessionID != "" || runAfter.RuntimeStartedAt != nil || runAfter.LastHeartbeatAt != nil {
 		t.Fatalf("expected runtime state to be cleared after pause, got %+v", runAfter)
+	}
+}
+
+func TestRuntimeLauncherRunTickTransitionsInterruptRequestedAgentToInterrupted(t *testing.T) {
+	ctx := context.Background()
+	client := openTestEntClient(t)
+	fixture := seedProjectFixture(ctx, t, client)
+	now := time.Date(2026, 3, 20, 13, 0, 0, 0, time.UTC)
+
+	bus := eventinfra.NewChannelBus()
+	stream, err := bus.Subscribe(ctx, agentLifecycleTopic)
+	if err != nil {
+		t.Fatalf("subscribe agent lifecycle stream: %v", err)
+	}
+	workflowItem, err := client.Workflow.Create().
+		SetProjectID(fixture.projectID).
+		SetName("Interrupt runtime").
+		SetType(entworkflow.TypeCoding).
+		SetHarnessPath(".openase/harnesses/coding.md").
+		AddPickupStatusIDs(fixture.statusIDs["Todo"]).
+		AddFinishStatusIDs(fixture.statusIDs["Done"]).
+		Save(ctx)
+	if err != nil {
+		t.Fatalf("create workflow: %v", err)
+	}
+
+	ticketItem, err := client.Ticket.Create().
+		SetProjectID(fixture.projectID).
+		SetIdentifier("ASE-406").
+		SetTitle("Interrupt Codex runtime").
+		SetStatusID(fixture.statusIDs["Todo"]).
+		SetWorkflowID(workflowItem.ID).
+		SetPriority(entticket.PriorityHigh).
+		SetCreatedBy("user:test").
+		Save(ctx)
+	if err != nil {
+		t.Fatalf("create ticket: %v", err)
+	}
+
+	agentItem, err := client.Agent.Create().
+		SetProjectID(fixture.projectID).
+		SetProviderID(fixture.providerID).
+		SetName("codex-interrupt-01").
+		Save(ctx)
+	if err != nil {
+		t.Fatalf("create claimed agent: %v", err)
+	}
+	runItem := mustCreateCurrentRun(ctx, t, client, agentItem, workflowItem.ID, ticketItem.ID, entagentrun.StatusLaunching, time.Time{})
+
+	manager := &runtimeFakeProcessManager{}
+	launcher := NewRuntimeLauncher(client, slog.New(slog.NewTextHandler(io.Discard, nil)), bus, manager, nil, nil)
+	launcher.now = func() time.Time {
+		return now
+	}
+	t.Cleanup(func() {
+		if err := launcher.Close(context.Background()); err != nil {
+			t.Errorf("close launcher: %v", err)
+		}
+	})
+
+	if err := launcher.RunTick(ctx); err != nil {
+		t.Fatalf("run initial launcher tick: %v", err)
+	}
+	waitForAgentLifecycleEvent(t, stream, agentReadyType)
+
+	if _, err := client.Agent.UpdateOneID(agentItem.ID).
+		SetRuntimeControlState(entagent.RuntimeControlStateInterruptRequested).
+		Save(ctx); err != nil {
+		t.Fatalf("request interrupt: %v", err)
+	}
+
+	if err := launcher.RunTick(ctx); err != nil {
+		t.Fatalf("run interrupt launcher tick: %v", err)
+	}
+
+	interruptedEvent := waitForAgentLifecycleEvent(t, stream, agentInterruptedType)
+	payload := decodeLifecycleEnvelope(t, interruptedEvent.Payload)
+	if payload.Agent.ID != agentItem.ID.String() || payload.Agent.Status != "interrupted" {
+		t.Fatalf("unexpected interrupted event payload: %+v", payload.Agent)
+	}
+
+	agentAfter, err := client.Agent.Get(ctx, agentItem.ID)
+	if err != nil {
+		t.Fatalf("reload agent: %v", err)
+	}
+	if agentAfter.RuntimeControlState != entagent.RuntimeControlStateActive {
+		t.Fatalf("expected active control state after interrupt, got %s", agentAfter.RuntimeControlState)
+	}
+
+	runAfter, err := client.AgentRun.Get(ctx, runItem.ID)
+	if err != nil {
+		t.Fatalf("reload run: %v", err)
+	}
+	if runAfter.Status != entagentrun.StatusInterrupted {
+		t.Fatalf("expected interrupted run after interrupt, got %s", runAfter.Status)
+	}
+	if runAfter.SessionID != "" || runAfter.RuntimeStartedAt != nil || runAfter.LastHeartbeatAt != nil {
+		t.Fatalf("expected runtime state to be cleared after interrupt, got %+v", runAfter)
+	}
+
+	ticketAfter, err := client.Ticket.Get(ctx, ticketItem.ID)
+	if err != nil {
+		t.Fatalf("reload ticket: %v", err)
+	}
+	if ticketAfter.CurrentRunID != nil {
+		t.Fatalf("expected interrupt to clear current run, got %+v", ticketAfter.CurrentRunID)
+	}
+	if !ticketAfter.RetryPaused || ticketAfter.PauseReason != ticketing.PauseReasonUserInterrupted.String() {
+		t.Fatalf("expected interrupt to pause retries with user_interrupted, got %+v", ticketAfter)
 	}
 }
 
