@@ -14,6 +14,7 @@
   import { appStore } from '$lib/stores/app.svelte'
   import { organizationPath } from '$lib/stores/app-context'
   import { cn } from '$lib/utils'
+  import { ArrowLeft } from '@lucide/svelte'
   import type { Snippet } from 'svelte'
 
   let {
@@ -28,7 +29,6 @@
 
   const currentOrg = $derived(appStore.currentOrg)
   let loading = $state(false)
-  let error = $state('')
   let permissions = $state<EffectivePermissionsResponse | null>(null)
   let summary = $state<OrganizationDashboardSummary | null>(null)
   let tokenSummary = $state<OrganizationTokenUsageSummary | null>(null)
@@ -38,6 +38,7 @@
     { label: 'Members', href: `${organizationPath(organizationId)}/admin/members` },
     { label: 'Invitations', href: `${organizationPath(organizationId)}/admin/invitations` },
     { label: 'Roles', href: `${organizationPath(organizationId)}/admin/roles` },
+    { label: 'Credentials', href: `${organizationPath(organizationId)}/admin/credentials` },
     { label: 'Settings', href: `${organizationPath(organizationId)}/admin/settings` },
   ])
 
@@ -65,7 +66,6 @@
 
     const load = async () => {
       loading = true
-      error = ''
       try {
         const [nextPermissions, nextSummary, nextMemberships, nextTokenUsage] = await Promise.all([
           getEffectivePermissions({ orgId: organizationId }),
@@ -73,9 +73,7 @@
           listOrganizationMemberships(organizationId, { signal: controller.signal }),
           getOrganizationTokenUsage(organizationId, dateRange(), { signal: controller.signal }),
         ])
-        if (cancelled) {
-          return
-        }
+        if (cancelled) return
         permissions = nextPermissions
         summary = nextSummary.organization ?? null
         tokenSummary = nextTokenUsage.summary ?? null
@@ -85,17 +83,13 @@
           suspended: nextMemberships.filter((item) => item.status === 'suspended').length,
         }
       } catch (caughtError) {
-        if (cancelled || controller.signal.aborted) {
-          return
+        if (cancelled || controller.signal.aborted) return
+        // Diagnostics are non-critical — silently degrade
+        if (!(caughtError instanceof ApiError)) {
+          console.warn('Failed to load org admin diagnostics', caughtError)
         }
-        error =
-          caughtError instanceof ApiError
-            ? caughtError.detail
-            : 'Failed to load organization admin diagnostics.'
       } finally {
-        if (!cancelled) {
-          loading = false
-        }
+        if (!cancelled) loading = false
       }
     }
 
@@ -108,80 +102,85 @@
 </script>
 
 <svelte:head>
-  <title>{currentOrg?.name ?? 'Organization'} admin - OpenASE</title>
+  <title>{currentOrg?.name ?? 'Organization'} admin — OpenASE</title>
 </svelte:head>
 
 <PageScaffold
-  title="Organization admin"
-  description="Members, invitations, roles, and organization settings."
+  title="{currentOrg?.name ?? 'Organization'} admin"
+  description="Members, invitations, roles, credentials, and organization settings."
 >
   <div class="space-y-6">
-    <div class="grid gap-4 lg:grid-cols-4">
-      <div class="rounded-3xl border bg-white p-4 shadow-sm">
-        <div class="text-muted-foreground text-xs tracking-[0.22em] uppercase">Members</div>
-        <div class="mt-3 text-3xl font-semibold">{memberStats.active}</div>
-        <div class="text-muted-foreground mt-1 text-sm">
-          {memberStats.invited} pending invites · {memberStats.suspended} suspended
+
+    <!-- Stat strip -->
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="border-border bg-card rounded-lg border px-4 py-3">
+        <div class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Members</div>
+        <div class="mt-2 text-2xl font-semibold tabular-nums">
+          {loading ? '—' : memberStats.active}
+        </div>
+        <div class="text-muted-foreground mt-0.5 text-xs">
+          {memberStats.invited} pending · {memberStats.suspended} suspended
         </div>
       </div>
-      <div class="rounded-3xl border bg-white p-4 shadow-sm">
-        <div class="text-muted-foreground text-xs tracking-[0.22em] uppercase">Projects</div>
-        <div class="mt-3 text-3xl font-semibold">{summary?.project_count ?? 0}</div>
-        <div class="text-muted-foreground mt-1 text-sm">
-          {summary?.active_project_count ?? 0} active descendants inherit org decisions
+
+      <div class="border-border bg-card rounded-lg border px-4 py-3">
+        <div class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Projects</div>
+        <div class="mt-2 text-2xl font-semibold tabular-nums">
+          {loading ? '—' : (summary?.project_count ?? 0)}
+        </div>
+        <div class="text-muted-foreground mt-0.5 text-xs">
+          {summary?.active_project_count ?? 0} active
         </div>
       </div>
-      <div class="rounded-3xl border bg-white p-4 shadow-sm">
-        <div class="text-muted-foreground text-xs tracking-[0.22em] uppercase">Org access</div>
-        <div class="mt-3 text-lg font-semibold">
-          {permissions?.roles?.length ? permissions.roles.join(', ') : 'No org roles'}
+
+      <div class="border-border bg-card rounded-lg border px-4 py-3">
+        <div class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Your org roles</div>
+        <div class="mt-2 text-sm font-semibold">
+          {loading ? '—' : (permissions?.roles?.length ? permissions.roles.join(', ') : 'No org roles')}
         </div>
-        <div class="text-muted-foreground mt-1 text-sm">
-          {permissions?.groups?.length ?? 0} synced groups currently contribute to effective access
+        <div class="text-muted-foreground mt-0.5 text-xs">
+          {permissions?.groups?.length ?? 0} synced groups
         </div>
       </div>
-      <div class="rounded-3xl border bg-white p-4 shadow-sm">
-        <div class="text-muted-foreground text-xs tracking-[0.22em] uppercase">7d diagnostics</div>
-        <div class="mt-3 text-3xl font-semibold">{tokenSummary?.total_tokens ?? 0}</div>
-        <div class="text-muted-foreground mt-1 text-sm">
-          Avg {tokenSummary?.avg_daily_tokens ?? 0} tokens/day across this organization
+
+      <div class="border-border bg-card rounded-lg border px-4 py-3">
+        <div class="text-muted-foreground text-xs font-medium uppercase tracking-wide">7d tokens</div>
+        <div class="mt-2 text-2xl font-semibold tabular-nums">
+          {loading ? '—' : (tokenSummary?.total_tokens ?? 0)}
+        </div>
+        <div class="text-muted-foreground mt-0.5 text-xs">
+          avg {tokenSummary?.avg_daily_tokens ?? 0}/day
         </div>
       </div>
     </div>
 
-    <div class="flex flex-wrap gap-2 rounded-3xl border bg-white p-2 shadow-sm">
-      {#each adminTabs as tab (tab.href)}
-        <a
-          href={tab.href}
-          class={cn(
-            'rounded-2xl px-4 py-2 text-sm font-medium transition-colors',
-            currentPath === tab.href
-              ? 'bg-slate-950 text-white'
-              : 'text-muted-foreground hover:bg-slate-100 hover:text-slate-950',
-          )}
-        >
-          {tab.label}
-        </a>
-      {/each}
-      <a
-        href={organizationPath(organizationId)}
-        class="text-muted-foreground rounded-2xl px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-100 hover:text-slate-950"
-      >
-        Back to org dashboard
-      </a>
+    <!-- Tab navigation -->
+    <div class="border-border border-b">
+      <nav class="-mb-px flex flex-wrap gap-x-1">
+        {#each adminTabs as tab (tab.href)}
+          <a
+            href={tab.href}
+            class={cn(
+              'border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+              currentPath === tab.href
+                ? 'border-foreground text-foreground'
+                : 'text-muted-foreground hover:text-foreground border-transparent hover:border-border',
+            )}
+          >
+            {tab.label}
+          </a>
+        {/each}
+        <div class="ml-auto flex items-center pb-1">
+          <a
+            href={organizationPath(organizationId)}
+            class="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
+          >
+            <ArrowLeft class="size-3" />
+            Back to org
+          </a>
+        </div>
+      </nav>
     </div>
-
-    {#if error}
-      <div
-        class="border-destructive/30 bg-destructive/5 text-destructive rounded-2xl border px-4 py-3 text-sm"
-      >
-        {error}
-      </div>
-    {:else if loading}
-      <div class="text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-sm">
-        Loading organization admin diagnostics…
-      </div>
-    {/if}
 
     {@render children()}
   </div>

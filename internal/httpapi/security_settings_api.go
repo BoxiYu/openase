@@ -146,6 +146,9 @@ func (s *Server) handlePutGitHubOutboundCredential(c echo.Context) error {
 	return s.writeSecuritySettingsResponse(c, projectID, mapGitHubSecurityResponse(security))
 }
 
+// Org credential scope is no longer accepted on project endpoints.
+// Use /orgs/:orgId/security/github-credential for org-level management.
+
 func (s *Server) handlePutOIDCDraft(c echo.Context) error {
 	projectID, err := s.requireProjectSecurityContext(c)
 	if err != nil {
@@ -297,16 +300,7 @@ func (s *Server) handleImportGitHubOutboundCredential(c echo.Context) error {
 		return writeAPIError(c, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", githubauthservice.ErrUnavailable.Error())
 	}
 
-	var raw rawGitHubCredentialScopeRequest
-	if err := c.Bind(&raw); err != nil {
-		return writeAPIError(c, http.StatusBadRequest, "INVALID_REQUEST", "invalid JSON body")
-	}
-	input, err := parseGitHubCredentialScopeRequest(projectID, raw)
-	if err != nil {
-		return writeAPIError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-	}
-
-	security, err := s.githubAuthService.ImportGHCLICredential(c.Request().Context(), input)
+	security, err := s.githubAuthService.ImportGHCLICredential(c.Request().Context(), parseGitHubCredentialScopeRequest(projectID))
 	if err != nil {
 		return writeGitHubAuthError(c, err)
 	}
@@ -322,16 +316,7 @@ func (s *Server) handleRetestGitHubOutboundCredential(c echo.Context) error {
 		return writeAPIError(c, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", githubauthservice.ErrUnavailable.Error())
 	}
 
-	var raw rawGitHubCredentialScopeRequest
-	if err := c.Bind(&raw); err != nil {
-		return writeAPIError(c, http.StatusBadRequest, "INVALID_REQUEST", "invalid JSON body")
-	}
-	input, err := parseGitHubCredentialScopeRequest(projectID, raw)
-	if err != nil {
-		return writeAPIError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-	}
-
-	security, err := s.githubAuthService.RetestCredential(c.Request().Context(), input)
+	security, err := s.githubAuthService.RetestCredential(c.Request().Context(), parseGitHubCredentialScopeRequest(projectID))
 	if err != nil {
 		return writeGitHubAuthError(c, err)
 	}
@@ -347,12 +332,7 @@ func (s *Server) handleDeleteGitHubOutboundCredential(c echo.Context) error {
 		return writeAPIError(c, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", githubauthservice.ErrUnavailable.Error())
 	}
 
-	input, err := parseGitHubCredentialScopeQuery(projectID, c.QueryParam("scope"))
-	if err != nil {
-		return writeAPIError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-	}
-
-	security, err := s.githubAuthService.DeleteCredential(c.Request().Context(), input)
+	security, err := s.githubAuthService.DeleteCredential(c.Request().Context(), parseGitHubCredentialScopeRequest(projectID))
 	if err != nil {
 		return writeGitHubAuthError(c, err)
 	}

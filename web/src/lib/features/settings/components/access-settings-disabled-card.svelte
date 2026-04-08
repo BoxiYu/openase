@@ -2,20 +2,15 @@
   import { FolderLock } from '@lucide/svelte'
 </script>
 
-<div class="border-border bg-card space-y-3 rounded-lg border p-4">
-  <div class="flex items-center gap-2">
-    <FolderLock class="text-muted-foreground size-4" />
-    <div class="text-sm font-semibold">Disabled-mode project access</div>
-  </div>
-  <div class="text-muted-foreground space-y-2 text-sm leading-6">
-    <p>
-      Disabled mode keeps the local bootstrap principal in charge, so this route focuses on boundary
-      clarity and migration guidance instead of pretending there is already a real multi-user
-      project directory.
-    </p>
-    <p>
-      When you switch to OIDC, return here to review effective project roles and manage
-      project-scoped bindings without reopening instance auth or org membership controls.
-    </p>
+<div class="border-border bg-muted/30 rounded-lg border p-4">
+  <div class="flex items-start gap-3">
+    <FolderLock class="text-muted-foreground mt-0.5 size-4 shrink-0" />
+    <div class="space-y-1.5">
+      <div class="text-sm font-semibold">Single-user mode</div>
+      <p class="text-muted-foreground text-sm leading-6">
+        Auth is disabled. The current user holds local highest privilege — no browser login or OIDC
+        dependency. Project-scoped bindings are not active in this mode.
+      </p>
+    </div>
   </div>
 </div>

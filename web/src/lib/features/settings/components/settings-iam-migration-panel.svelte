@@ -26,89 +26,99 @@
   const modeSummary = $derived(
     auth?.mode_summary ||
       (activeMode === 'oidc'
-        ? 'OIDC is active, so real human roles now decide who can reach instance, organization, and project controls.'
-        : 'Disabled mode keeps the local bootstrap principal active, but instance and organization IAM still live outside project security.'),
+        ? 'OIDC is active. Human roles determine who can reach instance, organization, and project controls.'
+        : 'Disabled mode keeps OpenASE in local single-user operation. The current user keeps local highest privilege without browser login or OIDC dependency.'),
   )
-  const recommendedMode = $derived(auth?.recommended_mode || '')
+  const recommendedMode = $derived(
+    auth?.recommended_mode ||
+      (activeMode !== 'oidc'
+        ? 'Keep disabled mode for personal or local-only use. Move to OIDC + instance_admin when you need real multi-user browser access control.'
+        : ''),
+  )
 </script>
 
 <div class="space-y-4">
-  <div class="rounded-2xl border border-amber-200/80 bg-amber-50/80 p-4 text-sm text-amber-950">
+  <!-- Auth mode status -->
+  <div class="border-border bg-card rounded-lg border p-4">
     <div class="flex flex-wrap items-center gap-2">
-      <Badge variant="outline">Compatibility notice</Badge>
-      <Badge variant="secondary">Active: {activeMode}</Badge>
-      <Badge variant="outline">Configured: {configuredMode}</Badge>
-    </div>
-    <p class="mt-3 leading-6">{modeSummary}</p>
-    {#if recommendedMode}
-      <p class="mt-2 text-xs leading-5 opacity-90">{recommendedMode}</p>
-    {/if}
-  </div>
-
-  <div class="grid gap-4 xl:grid-cols-3">
-    <div class="rounded-2xl border bg-white p-4 shadow-sm">
-      <div class="flex items-center gap-2">
-        <ShieldCheck class="text-muted-foreground size-4" />
-        <div class="text-sm font-semibold">Instance auth and directory</div>
+      <span class="text-muted-foreground text-xs font-medium">Auth mode</span>
+      <div class="flex items-center gap-1.5">
+        <span class="text-muted-foreground text-xs">Active</span>
+        <Badge variant="secondary">{activeMode}</Badge>
       </div>
-      <p class="text-muted-foreground mt-2 text-sm leading-6">
-        Manage auth mode, OIDC rollout, bootstrap admins, user directory, and session governance
-        under <code>/admin</code> instead of project settings.
-      </p>
-      <a
-        class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-sky-700 hover:text-sky-800"
-        href="/admin/auth"
-      >
-        Open <code>/admin/auth</code>
-        <ArrowRight class="size-4" />
-      </a>
-    </div>
-
-    <div class="rounded-2xl border bg-white p-4 shadow-sm">
-      <div class="flex items-center gap-2">
-        <Users class="text-muted-foreground size-4" />
-        <div class="text-sm font-semibold">Org members, invites, and roles</div>
-      </div>
-      <p class="text-muted-foreground mt-2 text-sm leading-6">
-        Org membership lifecycle and org-scoped RBAC now live in org admin so project settings no
-        longer doubles as the people-governance surface.
-      </p>
-      {#if orgAdminBase}
-        <a
-          class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-sky-700 hover:text-sky-800"
-          href={`${orgAdminBase}/members`}
-        >
-          Open org admin
-          <ArrowRight class="size-4" />
-        </a>
-      {:else}
-        <div class="text-muted-foreground mt-4 text-xs">
-          Select an organization to open org admin.
+      {#if configuredMode !== activeMode}
+        <div class="flex items-center gap-1.5">
+          <span class="text-muted-foreground text-xs">Configured</span>
+          <Badge variant="outline">{configuredMode}</Badge>
         </div>
       {/if}
     </div>
+    <p class="text-muted-foreground mt-3 text-sm leading-6">{modeSummary}</p>
+    {#if recommendedMode}
+      <p class="text-muted-foreground mt-1.5 text-xs leading-5">{recommendedMode}</p>
+    {/if}
+  </div>
 
-    <div class="rounded-2xl border bg-white p-4 shadow-sm">
+  <!-- IAM control planes -->
+  <div class="grid gap-3 xl:grid-cols-3">
+    <div class="border-border bg-card flex flex-col rounded-lg border p-4">
       <div class="flex items-center gap-2">
-        <KeyRound class="text-muted-foreground size-4" />
-        <div class="text-sm font-semibold">Project access stays here</div>
+        <ShieldCheck class="text-muted-foreground size-4 shrink-0" />
+        <span class="text-sm font-semibold">Instance auth and directory</span>
       </div>
-      <p class="text-muted-foreground mt-2 text-sm leading-6">
-        Keep project-scoped bindings and effective project access in Settings -&gt; Access. Project
-        Security stays focused on outbound credentials, webhooks, and runtime token posture.
+      <p class="text-muted-foreground mt-2 flex-1 text-sm leading-6">
+        Auth mode, OIDC rollout, bootstrap admins, user directory, and session governance.
+      </p>
+      <a
+        class="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+        href="/admin/auth"
+      >
+        Open <code class="text-xs">/admin/auth</code>
+        <ArrowRight class="size-3.5" />
+      </a>
+    </div>
+
+    <div class="border-border bg-card flex flex-col rounded-lg border p-4">
+      <div class="flex items-center gap-2">
+        <Users class="text-muted-foreground size-4 shrink-0" />
+        <span class="text-sm font-semibold">Org members, invites, and roles</span>
+      </div>
+      <p class="text-muted-foreground mt-2 flex-1 text-sm leading-6">
+        Org membership lifecycle, invites, and org-scoped role assignments.
+      </p>
+      {#if orgAdminBase}
+        <a
+          class="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+          href={`${orgAdminBase}/members`}
+        >
+          Open org admin
+          <ArrowRight class="size-3.5" />
+        </a>
+      {:else}
+        <p class="text-muted-foreground mt-4 text-xs">Select an organization to open org admin.</p>
+      {/if}
+    </div>
+
+    <div class="border-border bg-card flex flex-col rounded-lg border p-4">
+      <div class="flex items-center gap-2">
+        <KeyRound class="text-muted-foreground size-4 shrink-0" />
+        <span class="text-sm font-semibold">Project access</span>
+      </div>
+      <p class="text-muted-foreground mt-2 flex-1 text-sm leading-6">
+        Project-scoped role bindings and effective access for this project.
       </p>
       {#if projectAccessCurrent}
-        <div class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-          Current surface
-          <Badge variant="outline">Settings -&gt; Access</Badge>
+        <div class="mt-4 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <span class="size-1.5 rounded-full bg-green-500"></span>
+          You are here — Settings → Access
         </div>
       {:else}
         <a
-          class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-sky-700 hover:text-sky-800"
+          class="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
           href={projectAccessHref}
         >
-          Open Settings -&gt; Access
-          <ArrowRight class="size-4" />
+          Open Settings → Access
+          <ArrowRight class="size-3.5" />
         </a>
       {/if}
     </div>
