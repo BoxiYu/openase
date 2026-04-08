@@ -2189,6 +2189,7 @@ function createMockTicketRecord(input: {
     children: [],
     dependencies: [],
     external_links: [],
+    pull_request_urls: [],
     external_ref: '',
     budget_usd: 0,
     cost_tokens_input: 0,

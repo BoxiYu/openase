@@ -26,6 +26,7 @@
   let { organizationId }: { organizationId: string } = $props()
 
   type Slot = OrgGitHubCredentialResponse['credential']
+type Probe = Slot['probe'] & { login?: string }
 
   let credential = $state<Slot | null>(null)
   let loading = $state(false)
@@ -82,9 +83,7 @@
   }
 
   function displayLogin(): string {
-    const login = (
-      credential?.probe as (typeof credential.probe & { login?: string }) | undefined
-    )?.login?.trim()
+    const login = (credential?.probe as Probe | undefined)?.login?.trim()
     if (!login) return ''
     return login.startsWith('@') ? login : `@${login}`
   }
@@ -97,6 +96,10 @@
   }
 
   const anyBusy = $derived(actionKey !== '')
+
+  function isBusy(action: 'save' | 'import' | 'retest' | 'delete') {
+    return actionKey === action
+  }
 
   async function mutate(action: 'save' | 'import' | 'retest' | 'delete') {
     if (!organizationId) return
