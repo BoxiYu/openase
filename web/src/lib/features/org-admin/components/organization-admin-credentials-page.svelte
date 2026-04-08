@@ -26,7 +26,7 @@
   let { organizationId }: { organizationId: string } = $props()
 
   type Slot = OrgGitHubCredentialResponse['credential']
-type Probe = Slot['probe'] & { login?: string }
+  type Probe = Slot['probe'] & { login?: string }
 
   let credential = $state<Slot | null>(null)
   let loading = $state(false)
