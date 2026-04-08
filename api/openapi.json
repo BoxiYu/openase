@@ -17247,6 +17247,12 @@
                             "project_id": {
                               "type": "string"
                             },
+                            "pull_request_urls": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
                             "retry_paused": {
                               "type": "boolean"
                             },
@@ -19682,15 +19688,6 @@
               "format": "uuid",
               "type": "string"
             }
-          },
-          {
-            "description": "Credential scope to delete. Supported values are organization and project.",
-            "in": "query",
-            "name": "scope",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -20111,7 +20108,7 @@
                 }
               }
             },
-            "description": "Delete a stored platform-managed GitHub outbound credential response."
+            "description": "Delete the project-level GitHub credential override response."
           },
           "400": {
             "content": {
@@ -20204,7 +20201,7 @@
             "description": "Service Unavailable response."
           }
         },
-        "summary": "Delete a stored platform-managed GitHub outbound credential",
+        "summary": "Delete the project-level GitHub credential override",
         "tags": [
           "security-settings"
         ]
@@ -20228,10 +20225,6 @@
             "application/json": {
               "schema": {
                 "properties": {
-                  "scope": {
-                    "description": "Credential scope to mutate. Supported values are organization and project.",
-                    "type": "string"
-                  },
                   "token": {
                     "description": "GitHub token value copied into platform-managed secret storage.",
                     "type": "string"
@@ -20776,23 +20769,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "scope": {
-                    "description": "Credential scope to mutate. Supported values are organization and project.",
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "description": "Import the current gh auth token into platform-managed GitHub credential storage request body.",
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
@@ -21211,7 +21187,7 @@
                 }
               }
             },
-            "description": "Import the current gh auth token into platform-managed GitHub credential storage response."
+            "description": "Import the current gh auth token as the project-level GitHub credential override response."
           },
           "400": {
             "content": {
@@ -21304,7 +21280,7 @@
             "description": "Service Unavailable response."
           }
         },
-        "summary": "Import the current gh auth token into platform-managed GitHub credential storage",
+        "summary": "Import the current gh auth token as the project-level GitHub credential override",
         "tags": [
           "security-settings"
         ]
@@ -21325,23 +21301,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "scope": {
-                    "description": "Credential scope to mutate. Supported values are organization and project.",
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "description": "Retest a stored platform-managed GitHub outbound credential request body.",
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
@@ -21760,7 +21719,7 @@
                 }
               }
             },
-            "description": "Retest a stored platform-managed GitHub outbound credential response."
+            "description": "Retest the stored project-level GitHub credential override response."
           },
           "400": {
             "content": {
@@ -21853,7 +21812,7 @@
             "description": "Service Unavailable response."
           }
         },
-        "summary": "Retest a stored platform-managed GitHub outbound credential",
+        "summary": "Retest the stored project-level GitHub credential override",
         "tags": [
           "security-settings"
         ]
@@ -24402,6 +24361,12 @@
                           "project_id": {
                             "type": "string"
                           },
+                          "pull_request_urls": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
                           "retry_paused": {
                             "type": "boolean"
                           },
@@ -24781,6 +24746,12 @@
                         "project_id": {
                           "type": "string"
                         },
+                        "pull_request_urls": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
                         "retry_paused": {
                           "type": "boolean"
                         },
@@ -25120,6 +25091,12 @@
                           },
                           "project_id": {
                             "type": "string"
+                          },
+                          "pull_request_urls": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
                           },
                           "retry_paused": {
                             "type": "boolean"
@@ -25839,6 +25816,12 @@
                         },
                         "project_id": {
                           "type": "string"
+                        },
+                        "pull_request_urls": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
                         },
                         "retry_paused": {
                           "type": "boolean"
@@ -31447,6 +31430,12 @@
                         "project_id": {
                           "type": "string"
                         },
+                        "pull_request_urls": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
                         "retry_paused": {
                           "type": "boolean"
                         },
@@ -33749,6 +33738,12 @@
                         "project_id": {
                           "type": "string"
                         },
+                        "pull_request_urls": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
                         "retry_paused": {
                           "type": "boolean"
                         },
@@ -34109,6 +34104,12 @@
                         },
                         "project_id": {
                           "type": "string"
+                        },
+                        "pull_request_urls": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
                         },
                         "retry_paused": {
                           "type": "boolean"
@@ -35676,6 +35677,12 @@
                         },
                         "project_id": {
                           "type": "string"
+                        },
+                        "pull_request_urls": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
                         },
                         "retry_paused": {
                           "type": "boolean"
