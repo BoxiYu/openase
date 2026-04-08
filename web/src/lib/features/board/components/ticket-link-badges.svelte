@@ -30,8 +30,9 @@
   const scopePRs = $derived(
     pullRequestURLs
       .map((url) => ({ url, parsed: parseGitHubPR(url) }))
-      .filter((x): x is { url: string; parsed: NonNullable<ReturnType<typeof parseGitHubPR>> } =>
-        x.parsed !== null,
+      .filter(
+        (x): x is { url: string; parsed: NonNullable<ReturnType<typeof parseGitHubPR>> } =>
+          x.parsed !== null,
       ),
   )
 

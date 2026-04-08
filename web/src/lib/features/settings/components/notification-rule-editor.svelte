@@ -42,9 +42,7 @@
   } = $props()
 
   const currentSeverity: EventSeverity = $derived(getSeverity(draft.eventType, eventTypes))
-  const templateVarGroups = $derived(
-    draft.eventType ? getTemplateVariables(draft.eventType) : [],
-  )
+  const templateVarGroups = $derived(draft.eventType ? getTemplateVariables(draft.eventType) : [])
 
   let showVariables = $state(false)
   let templateRef = $state<HTMLTextAreaElement | null>(null)
@@ -201,10 +199,10 @@
     </div>
 
     {#if showVariables && templateVarGroups.length > 0}
-      <div class="border-border bg-muted/30 rounded-md border p-3 space-y-3">
+      <div class="border-border bg-muted/30 space-y-3 rounded-md border p-3">
         {#each templateVarGroups as group (group.label)}
           <div class="space-y-1.5">
-            <p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+            <p class="text-muted-foreground text-xs font-medium tracking-wide uppercase">
               {group.label}
             </p>
             <div class="flex flex-wrap gap-1.5">
@@ -212,7 +210,7 @@
                 <button
                   type="button"
                   title={variable.description}
-                  class="bg-background border-border hover:bg-accent hover:border-ring inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-xs transition-colors cursor-pointer"
+                  class="bg-background border-border hover:bg-accent hover:border-ring inline-flex cursor-pointer items-center rounded border px-1.5 py-0.5 font-mono text-xs transition-colors"
                   onclick={() => insertVariable(variable.name)}
                 >
                   {variable.name}

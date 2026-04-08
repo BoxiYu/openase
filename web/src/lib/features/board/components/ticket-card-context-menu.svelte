@@ -64,7 +64,7 @@
 </script>
 
 <ContextMenuPrimitive.Root bind:open>
-  <ContextMenuPrimitive.Trigger class="block w-full" disabled={disabled}>
+  <ContextMenuPrimitive.Trigger class="block w-full" {disabled}>
     {@render children?.()}
   </ContextMenuPrimitive.Trigger>
 

@@ -98,7 +98,9 @@
       toastStore.success('Project role binding added.')
     } catch (caughtError) {
       const message =
-        caughtError instanceof Error ? caughtError.message : 'Failed to create project role binding.'
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Failed to create project role binding.'
       accessError = message
       toastStore.error(message)
     } finally {
@@ -119,7 +121,9 @@
       toastStore.success('Project role binding removed.')
     } catch (caughtError) {
       const message =
-        caughtError instanceof ApiError ? caughtError.detail : 'Failed to delete project role binding.'
+        caughtError instanceof ApiError
+          ? caughtError.detail
+          : 'Failed to delete project role binding.'
       accessError = message
       toastStore.error(message)
     } finally {
@@ -163,7 +167,7 @@
         </div>
         <div class="grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <div class="text-muted-foreground text-xs uppercase tracking-[0.22em]">Principal</div>
+            <div class="text-muted-foreground text-xs tracking-[0.22em] uppercase">Principal</div>
             <div class="mt-2 font-medium">
               {authStore.user?.displayName || authStore.user?.primaryEmail || 'Authenticated user'}
             </div>
@@ -172,7 +176,9 @@
             </div>
           </div>
           <div>
-            <div class="text-muted-foreground text-xs uppercase tracking-[0.22em]">Synced groups</div>
+            <div class="text-muted-foreground text-xs tracking-[0.22em] uppercase">
+              Synced groups
+            </div>
             <div class="mt-2 flex flex-wrap gap-2">
               {#if currentGroups.length > 0}
                 {#each currentGroups as group (group.issuer + ':' + group.group_key)}

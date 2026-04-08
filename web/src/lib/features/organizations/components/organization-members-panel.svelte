@@ -91,7 +91,9 @@
       <p class="text-muted-foreground text-sm">{description}</p>
     </div>
     <div class="flex shrink-0 flex-wrap items-center gap-2">
-      <span class="text-muted-foreground text-xs">{counts.owners} owner{counts.owners === 1 ? '' : 's'}</span>
+      <span class="text-muted-foreground text-xs"
+        >{counts.owners} owner{counts.owners === 1 ? '' : 's'}</span
+      >
       <span class="text-muted-foreground text-xs">·</span>
       <span class="text-muted-foreground text-xs">{membershipsCount} total seats</span>
     </div>

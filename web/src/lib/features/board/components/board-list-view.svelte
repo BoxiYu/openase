@@ -125,7 +125,10 @@
                 </span>
               </td>
               <td class="px-4 py-3">
-                <TicketLinkBadges links={row.ticket.externalLinks} pullRequestURLs={row.ticket.pullRequestURLs} />
+                <TicketLinkBadges
+                  links={row.ticket.externalLinks}
+                  pullRequestURLs={row.ticket.pullRequestURLs}
+                />
               </td>
               <td class="px-4 py-3 text-right">
                 <span class="text-muted-foreground text-xs">

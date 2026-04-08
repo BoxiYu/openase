@@ -20,7 +20,7 @@
       >
         <div class="flex items-start justify-between gap-3">
           <div class="text-sm font-medium">{doc.title}</div>
-          <ExternalLink class="text-muted-foreground size-3.5 shrink-0 mt-0.5" />
+          <ExternalLink class="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
         </div>
         <p class="text-muted-foreground text-xs leading-relaxed">{doc.summary}</p>
       </a>

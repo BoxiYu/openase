@@ -79,9 +79,7 @@
       </div>
       <Button variant="outline" size="sm" onclick={onCopyToken}>Copy token</Button>
     </div>
-    <code
-      class="bg-muted text-foreground mt-3 block overflow-x-auto rounded-md px-3 py-2 text-xs"
-    >
+    <code class="bg-muted text-foreground mt-3 block overflow-x-auto rounded-md px-3 py-2 text-xs">
       {recentInviteToken}
     </code>
   </div>

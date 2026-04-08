@@ -110,11 +110,10 @@
   description="Members, invitations, roles, credentials, and organization settings."
 >
   <div class="space-y-6">
-
     <!-- Stat strip -->
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div class="border-border bg-card rounded-lg border px-4 py-3">
-        <div class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Members</div>
+        <div class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Members</div>
         <div class="mt-2 text-2xl font-semibold tabular-nums">
           {loading ? '—' : memberStats.active}
         </div>
@@ -124,7 +123,9 @@
       </div>
 
       <div class="border-border bg-card rounded-lg border px-4 py-3">
-        <div class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Projects</div>
+        <div class="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          Projects
+        </div>
         <div class="mt-2 text-2xl font-semibold tabular-nums">
           {loading ? '—' : (summary?.project_count ?? 0)}
         </div>
@@ -134,9 +135,15 @@
       </div>
 
       <div class="border-border bg-card rounded-lg border px-4 py-3">
-        <div class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Your org roles</div>
+        <div class="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          Your org roles
+        </div>
         <div class="mt-2 text-sm font-semibold">
-          {loading ? '—' : (permissions?.roles?.length ? permissions.roles.join(', ') : 'No org roles')}
+          {loading
+            ? '—'
+            : permissions?.roles?.length
+              ? permissions.roles.join(', ')
+              : 'No org roles'}
         </div>
         <div class="text-muted-foreground mt-0.5 text-xs">
           {permissions?.groups?.length ?? 0} synced groups
@@ -144,7 +151,9 @@
       </div>
 
       <div class="border-border bg-card rounded-lg border px-4 py-3">
-        <div class="text-muted-foreground text-xs font-medium uppercase tracking-wide">7d tokens</div>
+        <div class="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          7d tokens
+        </div>
         <div class="mt-2 text-2xl font-semibold tabular-nums">
           {loading ? '—' : (tokenSummary?.total_tokens ?? 0)}
         </div>
@@ -164,7 +173,7 @@
               'border-b-2 px-3 py-2 text-sm font-medium transition-colors',
               currentPath === tab.href
                 ? 'border-foreground text-foreground'
-                : 'text-muted-foreground hover:text-foreground border-transparent hover:border-border',
+                : 'text-muted-foreground hover:text-foreground hover:border-border border-transparent',
             )}
           >
             {tab.label}

@@ -195,12 +195,7 @@
           class="h-8 text-xs"
           oninput={(event) => onTokenChange(event.currentTarget.value)}
         />
-        <Button
-          size="sm"
-          class="h-8 shrink-0"
-          onclick={() => onAction('save')}
-          disabled={anyBusy}
-        >
+        <Button size="sm" class="h-8 shrink-0" onclick={() => onAction('save')} disabled={anyBusy}>
           {#if isBusy('save')}
             <LoaderCircle class="mr-1.5 size-3 animate-spin" />
           {:else}

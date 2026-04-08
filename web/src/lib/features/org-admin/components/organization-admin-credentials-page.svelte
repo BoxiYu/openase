@@ -52,7 +52,10 @@
       } catch (caughtError) {
         if (cancelled) return
         credential = null
-        error = caughtError instanceof ApiError ? caughtError.detail : 'Failed to load org GitHub credential.'
+        error =
+          caughtError instanceof ApiError
+            ? caughtError.detail
+            : 'Failed to load org GitHub credential.'
       } finally {
         if (!cancelled) loading = false
       }
@@ -67,7 +70,8 @@
   function statusDot(): string {
     if (!credential?.configured) return 'bg-slate-400'
     if (credential.probe.valid) return 'bg-emerald-500'
-    if (credential.probe.state === 'error' || credential.probe.state === 'revoked') return 'bg-rose-500'
+    if (credential.probe.state === 'error' || credential.probe.state === 'revoked')
+      return 'bg-rose-500'
     return 'bg-amber-500'
   }
 
@@ -77,7 +81,9 @@
   }
 
   function displayLogin(): string {
-    const login = (credential?.probe as (typeof credential.probe & { login?: string }) | undefined)?.login?.trim()
+    const login = (
+      credential?.probe as (typeof credential.probe & { login?: string }) | undefined
+    )?.login?.trim()
     if (!login) return ''
     return login.startsWith('@') ? login : `@${login}`
   }
@@ -320,8 +326,8 @@
     </div>
 
     <p class="text-muted-foreground text-xs leading-5">
-      This credential is shared across all projects in the org. Projects with their own override
-      in Security settings will use that instead.
+      This credential is shared across all projects in the org. Projects with their own override in
+      Security settings will use that instead.
     </p>
   {/if}
 </div>

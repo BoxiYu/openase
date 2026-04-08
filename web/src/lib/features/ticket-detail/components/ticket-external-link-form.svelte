@@ -100,12 +100,13 @@
   const relationLabel = $derived(
     relationOptions.find((o) => o.value === draft.relation)?.label ?? draft.relation,
   )
-  const statusLabel = $derived(
-    statusOptions.find((o) => o.value === draft.status)?.label ?? 'None',
-  )
+  const statusLabel = $derived(statusOptions.find((o) => o.value === draft.status)?.label ?? 'None')
 
   const canSubmit = $derived(
-    draft.url.trim().length > 0 && draft.type && draft.relation && draft.externalId.trim().length > 0,
+    draft.url.trim().length > 0 &&
+      draft.type &&
+      draft.relation &&
+      draft.externalId.trim().length > 0,
   )
 </script>
 
@@ -170,11 +171,7 @@
       <Label for="external-link-id">
         External ID <span class="text-destructive">*</span>
       </Label>
-      <Input
-        id="external-link-id"
-        bind:value={draft.externalId}
-        placeholder="PR-123"
-      />
+      <Input id="external-link-id" bind:value={draft.externalId} placeholder="PR-123" />
     </div>
 
     <!-- Status — optional -->

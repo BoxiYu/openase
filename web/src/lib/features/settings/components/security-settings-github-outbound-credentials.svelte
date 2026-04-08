@@ -83,9 +83,14 @@
   <!-- Effective credential status bar -->
   <div class="bg-muted/40 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-4 py-3">
     <div class="flex items-center gap-2">
-      <span class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Effective credential</span>
-      <span class={`inline-block size-2 rounded-full ${effectiveStatusDot(security.github.effective)}`}></span>
-      <span class="text-sm font-medium capitalize">{effectiveLabel(security.github.effective)}</span>
+      <span class="text-muted-foreground text-xs font-medium tracking-wide uppercase"
+        >Effective credential</span
+      >
+      <span
+        class={`inline-block size-2 rounded-full ${effectiveStatusDot(security.github.effective)}`}
+      ></span>
+      <span class="text-sm font-medium capitalize">{effectiveLabel(security.github.effective)}</span
+      >
     </div>
     {#if security.github.effective.configured}
       <span class="text-muted-foreground text-xs">
@@ -95,14 +100,20 @@
         {/if}
       </span>
       {#if displayLogin(security.github.effective)}
-        <span class="text-muted-foreground text-xs">User {displayLogin(security.github.effective)}</span>
+        <span class="text-muted-foreground text-xs"
+          >User {displayLogin(security.github.effective)}</span
+        >
       {/if}
       <code class="text-muted-foreground text-xs">{security.github.effective.token_preview}</code>
       {#if security.github.effective.probe.permissions.length}
-        <span class="text-muted-foreground text-xs">{security.github.effective.probe.permissions.join(', ')}</span>
+        <span class="text-muted-foreground text-xs"
+          >{security.github.effective.probe.permissions.join(', ')}</span
+        >
       {/if}
       {#if formatCheckedAt(security.github.effective.probe.checked_at)}
-        <span class="text-muted-foreground text-xs">Checked {formatCheckedAt(security.github.effective.probe.checked_at)}</span>
+        <span class="text-muted-foreground text-xs"
+          >Checked {formatCheckedAt(security.github.effective.probe.checked_at)}</span
+        >
       {/if}
     {/if}
     {#if security.github.effective.probe.last_error}
@@ -129,7 +140,12 @@
           {#if (security.github.organization.probe as typeof security.github.organization.probe & { login?: string }).login}
             <div>
               <span class="text-muted-foreground">User</span>
-              <div>@{(security.github.organization.probe as typeof security.github.organization.probe & { login?: string }).login}</div>
+              <div>
+                @{(
+                  security.github.organization
+                    .probe as typeof security.github.organization.probe & { login?: string }
+                ).login}
+              </div>
             </div>
           {/if}
           <div>

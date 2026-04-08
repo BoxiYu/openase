@@ -463,10 +463,9 @@ export function getOrgGitHubCredential(orgId: string) {
 }
 
 export function saveOrgGitHubCredential(orgId: string, body: { token: string }) {
-  return api.put<OrgGitHubCredentialResponse>(
-    `/api/v1/orgs/${orgId}/security/github-credential`,
-    { body },
-  )
+  return api.put<OrgGitHubCredentialResponse>(`/api/v1/orgs/${orgId}/security/github-credential`, {
+    body,
+  })
 }
 
 export function importOrgGitHubCredentialFromGHCLI(orgId: string) {
@@ -484,9 +483,7 @@ export function retestOrgGitHubCredential(orgId: string) {
 }
 
 export function deleteOrgGitHubCredential(orgId: string) {
-  return api.delete<OrgGitHubCredentialResponse>(
-    `/api/v1/orgs/${orgId}/security/github-credential`,
-  )
+  return api.delete<OrgGitHubCredentialResponse>(`/api/v1/orgs/${orgId}/security/github-credential`)
 }
 
 export function getHRAdvisor(projectId: string) {
