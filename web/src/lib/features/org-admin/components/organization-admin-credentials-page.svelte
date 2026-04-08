@@ -1,3 +1,4 @@
+<!-- eslint-disable max-lines -->
 <script lang="ts">
   import { ApiError } from '$lib/api/client'
   import type { OrgGitHubCredentialResponse } from '$lib/api/contracts'
