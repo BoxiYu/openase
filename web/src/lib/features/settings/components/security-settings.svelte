@@ -15,6 +15,7 @@
   import GitHubOutboundCredentialsPanel from './security-settings-github-outbound-credentials.svelte'
   import ProjectScopedSecretsPanel from './project-scoped-secrets-panel.svelte'
   import SecurityPlatformDetails from './security-settings-platform-details.svelte'
+  import SecuritySettingsSecretBindingsSection from './security-settings-secret-bindings-section.svelte'
   import SettingsIAMMigrationPanel from './settings-iam-migration-panel.svelte'
   import { normalizeSecuritySettings } from '../security-settings'
 
@@ -65,7 +66,6 @@
       cancelled = true
     }
   })
-
   function formatError(caughtError: unknown, fallback: string) {
     return caughtError instanceof ApiError ? caughtError.detail : fallback
   }
@@ -187,6 +187,10 @@
       onAction={mutateScope}
       onManualTokenChange={handleManualTokenChange}
     />
+
+    <Separator />
+
+    <SecuritySettingsSecretBindingsSection />
 
     <Separator />
 
