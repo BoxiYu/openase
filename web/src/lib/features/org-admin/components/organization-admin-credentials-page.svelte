@@ -1,4 +1,3 @@
-<!-- eslint-disable max-lines -->
 <script lang="ts">
   import { ApiError } from '$lib/api/client'
   import type { OrgGitHubCredentialResponse } from '$lib/api/contracts'
@@ -17,11 +16,12 @@
     ChevronUp,
     KeyRound,
     LoaderCircle,
-    RefreshCw,
     ShieldCheck,
-    Trash2,
     Upload,
   } from '@lucide/svelte'
+  import OrganizationAdminCredentialsActions from './organization-admin-credentials-actions.svelte'
+  import OrganizationAdminCredentialsIntro from './organization-admin-credentials-intro.svelte'
+  import OrganizationAdminCredentialsLoading from './organization-admin-credentials-loading.svelte'
 
   let { organizationId }: { organizationId: string } = $props()
 
@@ -96,10 +96,6 @@
     return parsed.toLocaleString()
   }
 
-  function isBusy(action: string) {
-    return actionKey === action
-  }
-
   const anyBusy = $derived(actionKey !== '')
 
   async function mutate(action: 'save' | 'import' | 'retest' | 'delete') {
@@ -145,25 +141,10 @@
 </script>
 
 <div class="space-y-6">
-  <div>
-    <h2 class="text-foreground text-base font-semibold">Credentials</h2>
-    <p class="text-muted-foreground mt-1 text-sm">
-      Org-level GitHub credential used as the default for all projects in this organization.
-      Individual projects can override it in their own Security settings.
-    </p>
-  </div>
+  <OrganizationAdminCredentialsIntro />
 
   {#if loading}
-    <div class="border-border bg-card rounded-lg border p-4">
-      <div class="flex items-center gap-3">
-        <div class="bg-muted size-8 shrink-0 animate-pulse rounded-lg"></div>
-        <div class="flex-1 space-y-1.5">
-          <div class="bg-muted h-4 w-36 animate-pulse rounded"></div>
-          <div class="bg-muted h-3 w-48 animate-pulse rounded"></div>
-        </div>
-        <div class="bg-muted h-7 w-20 animate-pulse rounded-md"></div>
-      </div>
-    </div>
+    <OrganizationAdminCredentialsLoading />
   {:else if error}
     <div class="text-destructive text-sm">{error}</div>
   {:else if credential !== null}
@@ -176,38 +157,13 @@
           <span class={`inline-block size-2 rounded-full ${statusDot()}`}></span>
           <span class="text-muted-foreground text-xs capitalize">{statusLabel()}</span>
         </div>
-        {#if credential.configured}
-          <div class="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              class="size-7"
-              onclick={() => mutate('retest')}
-              disabled={anyBusy}
-              title="Retest"
-            >
-              {#if isBusy('retest')}
-                <LoaderCircle class="size-3.5 animate-spin" />
-              {:else}
-                <RefreshCw class="size-3.5" />
-              {/if}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              class="text-destructive hover:text-destructive size-7"
-              onclick={() => mutate('delete')}
-              disabled={anyBusy}
-              title="Delete"
-            >
-              {#if isBusy('delete')}
-                <LoaderCircle class="size-3.5 animate-spin" />
-              {:else}
-                <Trash2 class="size-3.5" />
-              {/if}
-            </Button>
-          </div>
-        {/if}
+        <OrganizationAdminCredentialsActions
+          configured={credential.configured}
+          {anyBusy}
+          {actionKey}
+          onRetest={() => mutate('retest')}
+          onDelete={() => mutate('delete')}
+        />
       </div>
 
       <!-- Details -->
