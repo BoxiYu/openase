@@ -774,6 +774,7 @@ type OpenAPITicket struct {
 	Children          []OpenAPITicketReference    `json:"children"`
 	Dependencies      []OpenAPITicketDependency   `json:"dependencies"`
 	ExternalLinks     []OpenAPITicketExternalLink `json:"external_links"`
+	PullRequestURLs   []string                    `json:"pull_request_urls"`
 	ExternalRef       string                      `json:"external_ref"`
 	BudgetUSD         float64                     `json:"budget_usd"`
 	CostTokensInput   int64                       `json:"cost_tokens_input"`
@@ -2078,7 +2079,6 @@ type OpenAPICreateProjectRepoRequest catalogdomain.ProjectRepoInput
 type OpenAPIUpdateProjectRepoRequest projectRepoPatchRequest
 type OpenAPICreateGitHubRepositoryRequest githubrepodomain.CreateRepositoryRequest
 type OpenAPISaveGitHubOutboundCredentialRequest rawSaveGitHubOutboundCredentialRequest
-type OpenAPIGitHubCredentialScopeRequest rawGitHubCredentialScopeRequest
 type OpenAPISecurityOIDCDraftRequest rawSecurityOIDCDraftRequest
 type OpenAPICreateScopedSecretRequest rawCreateScopedSecretRequest
 type OpenAPICreateScopedSecretBindingRequest rawCreateScopedSecretBindingRequest
@@ -6052,11 +6052,11 @@ func (b openAPISpecBuilder) addSecurityOperations() error {
 
 	securityImport, err := b.jsonOperation(
 		"importGitHubOutboundCredentialFromGHCLI",
-		"Import the current gh auth token into platform-managed GitHub credential storage",
+		"Import the current gh auth token as the project-level GitHub credential override",
 		[]string{"security-settings"},
 		http.StatusOK,
 		OpenAPISecuritySettingsResponse{},
-		OpenAPIGitHubCredentialScopeRequest{},
+		nil,
 		http.StatusBadRequest,
 		http.StatusNotFound,
 		http.StatusServiceUnavailable,
@@ -6071,11 +6071,11 @@ func (b openAPISpecBuilder) addSecurityOperations() error {
 
 	securityRetest, err := b.jsonOperation(
 		"retestGitHubOutboundCredential",
-		"Retest a stored platform-managed GitHub outbound credential",
+		"Retest the stored project-level GitHub credential override",
 		[]string{"security-settings"},
 		http.StatusOK,
 		OpenAPISecuritySettingsResponse{},
-		OpenAPIGitHubCredentialScopeRequest{},
+		nil,
 		http.StatusBadRequest,
 		http.StatusNotFound,
 		http.StatusServiceUnavailable,
@@ -6090,7 +6090,7 @@ func (b openAPISpecBuilder) addSecurityOperations() error {
 
 	securityDelete, err := b.jsonOperation(
 		"deleteGitHubOutboundCredential",
-		"Delete a stored platform-managed GitHub outbound credential",
+		"Delete the project-level GitHub credential override",
 		[]string{"security-settings"},
 		http.StatusOK,
 		OpenAPISecuritySettingsResponse{},
@@ -6105,10 +6105,6 @@ func (b openAPISpecBuilder) addSecurityOperations() error {
 		return err
 	}
 	securityDelete.AddParameter(uuidPathParameter("projectId", "Project ID."))
-	securityDelete.AddParameter(openapi3.NewQueryParameter("scope").
-		WithDescription("Credential scope to delete. Supported values are organization and project.").
-		WithRequired(true).
-		WithSchema(openapi3.NewStringSchema()))
 	b.doc.AddOperation("/api/v1/projects/{projectId}/security-settings/github-outbound-credential", http.MethodDelete, securityDelete)
 
 	return nil

@@ -19,6 +19,7 @@ import type {
   CreateScopedSecretBindingResponse,
   DeleteScopedSecretBindingResponse,
   DeleteGitHubOutboundCredentialResponse,
+  OrgGitHubCredentialResponse,
   GitHubRepositoryCreateResponse,
   GitHubRepositoryListResponse,
   GitHubRepositoryNamespacesResponse,
@@ -543,51 +544,61 @@ export async function getScopeGroups(
   return response.security?.agent_tokens?.supported_scope_groups ?? []
 }
 
-export function saveGitHubOutboundCredential(
-  projectId: string,
-  body: {
-    scope: 'organization' | 'project'
-    token: string
-  },
-) {
+// Project-scoped credential — only manages the project override
+export function saveGitHubOutboundCredential(projectId: string, body: { token: string }) {
   return api.put<SaveGitHubOutboundCredentialResponse>(
     `/api/v1/projects/${projectId}/security-settings/github-outbound-credential`,
     { body },
   )
 }
 
-export function importGitHubOutboundCredentialFromGHCLI(
-  projectId: string,
-  body: {
-    scope: 'organization' | 'project'
-  },
-) {
+export function importGitHubOutboundCredentialFromGHCLI(projectId: string) {
   return api.post<ImportGitHubOutboundCredentialResponse>(
     `/api/v1/projects/${projectId}/security-settings/github-outbound-credential/import-gh-cli`,
-    { body },
+    {},
   )
 }
 
-export function retestGitHubOutboundCredential(
-  projectId: string,
-  body: {
-    scope: 'organization' | 'project'
-  },
-) {
+export function retestGitHubOutboundCredential(projectId: string) {
   return api.post<RetestGitHubOutboundCredentialResponse>(
     `/api/v1/projects/${projectId}/security-settings/github-outbound-credential/retest`,
-    { body },
+    {},
   )
 }
 
-export function deleteGitHubOutboundCredential(
-  projectId: string,
-  scope: 'organization' | 'project',
-) {
-  const params = new URLSearchParams({ scope })
+export function deleteGitHubOutboundCredential(projectId: string) {
   return api.delete<DeleteGitHubOutboundCredentialResponse>(
-    `/api/v1/projects/${projectId}/security-settings/github-outbound-credential?${params.toString()}`,
+    `/api/v1/projects/${projectId}/security-settings/github-outbound-credential`,
   )
+}
+
+// Org-scoped credential — manages the org default that all projects fall back to
+export function getOrgGitHubCredential(orgId: string) {
+  return api.get<OrgGitHubCredentialResponse>(`/api/v1/orgs/${orgId}/security/github-credential`)
+}
+
+export function saveOrgGitHubCredential(orgId: string, body: { token: string }) {
+  return api.put<OrgGitHubCredentialResponse>(`/api/v1/orgs/${orgId}/security/github-credential`, {
+    body,
+  })
+}
+
+export function importOrgGitHubCredentialFromGHCLI(orgId: string) {
+  return api.post<OrgGitHubCredentialResponse>(
+    `/api/v1/orgs/${orgId}/security/github-credential/import-gh-cli`,
+    {},
+  )
+}
+
+export function retestOrgGitHubCredential(orgId: string) {
+  return api.post<OrgGitHubCredentialResponse>(
+    `/api/v1/orgs/${orgId}/security/github-credential/retest`,
+    {},
+  )
+}
+
+export function deleteOrgGitHubCredential(orgId: string) {
+  return api.delete<OrgGitHubCredentialResponse>(`/api/v1/orgs/${orgId}/security/github-credential`)
 }
 
 export function getHRAdvisor(projectId: string) {
