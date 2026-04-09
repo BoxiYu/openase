@@ -162,7 +162,7 @@ func (a *App) RunServe(ctx context.Context) error {
 	catalogRepo := catalogrepo.NewEntRepository(client)
 	humanAuthRepo := humanauthrepo.NewEntRepository(client)
 	humanVisibility := humanauthservice.NewVisibilityResolver(humanAuthRepo)
-	githubAuthSvc, err := githubauthservice.New(githubauthrepo.NewEntRepository(client), http.DefaultClient, a.config.Database.DSN)
+	githubAuthSvc, err := githubauthservice.New(githubauthrepo.NewEntRepository(client), http.DefaultClient, a.config.ResolvedSecurityCipherSeed())
 	if err != nil {
 		return err
 	}
@@ -340,7 +340,7 @@ func (a *App) RunOrchestrate(ctx context.Context) error {
 		}
 	}()
 
-	githubAuthSvc, err := githubauthservice.New(githubauthrepo.NewEntRepository(client), http.DefaultClient, a.config.Database.DSN)
+	githubAuthSvc, err := githubauthservice.New(githubauthrepo.NewEntRepository(client), http.DefaultClient, a.config.ResolvedSecurityCipherSeed())
 	if err != nil {
 		return err
 	}
