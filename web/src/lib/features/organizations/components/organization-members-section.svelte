@@ -33,6 +33,11 @@
     emptyMessage?: string
   } = $props()
 
+  void mode
+  void heading
+  void description
+  void emptyMessage
+
   const currentUserId = $derived(authStore.user?.id ?? '')
   let memberships = $state<OrganizationMembership[]>([])
   let orgPermissions = $state<EffectivePermissionsResponse | null>(null)

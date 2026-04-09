@@ -6,7 +6,6 @@
     type RoleBinding,
   } from '$lib/api/auth'
   import { ApiError } from '$lib/api/client'
-  import type { SecuritySettingsResponse } from '$lib/api/contracts'
   import { getSecuritySettings } from '$lib/api/openase'
   import { appStore } from '$lib/stores/app.svelte'
   import { authStore } from '$lib/stores/auth.svelte'
@@ -26,8 +25,6 @@
     formatError,
     type BindingDraft,
   } from './security-settings-human-auth.model'
-  type Security = SecuritySettingsResponse['security']
-  let security = $state<Security | null>(null)
   let loading = $state(false)
   let error = $state('')
   let accessLoading = $state(false)
@@ -48,7 +45,6 @@
   $effect(() => {
     const projectId = currentProjectId
     if (!projectId) {
-      security = null
       error = ''
       return
     }
@@ -59,16 +55,14 @@
       loading = true
       error = ''
       try {
-        const payload = await getSecuritySettings(projectId)
+        await getSecuritySettings(projectId)
         if (cancelled) {
           return
         }
-        security = payload.security
       } catch (caughtError) {
         if (cancelled) {
           return
         }
-        security = null
         error = formatError(caughtError, 'Failed to load access settings.')
       } finally {
         if (!cancelled) {

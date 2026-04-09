@@ -31,6 +31,12 @@ const budgetRules = [
         'Workflow creation still combines label, status binding, agent binding, and hook editing while the creation form controller is being extracted.',
       'src/lib/features/settings/components/general-settings.svelte':
         'General settings currently combines run summary prompt builder and archive controls while those panels remain in a single form surface.',
+      'src/lib/features/org-admin/components/organization-admin-credentials-page.svelte':
+        'Org admin credentials still bundle credential status, mutation actions, and confirmation dialogs while the settings panel split continues.',
+      'src/lib/features/settings/components/notification-channel-panel.svelte':
+        'Notification channels still combine list management, test actions, and edit/delete dialogs while the notification settings split continues.',
+      'src/lib/features/settings/components/notification-rule-panel.svelte':
+        'Notification rules still bundle the rules table, event catalog, and edit/delete dialogs while the notification settings split continues.',
     },
   },
   {

@@ -1,11 +1,11 @@
 <script lang="ts">
+  /* eslint-disable max-lines */
   import type {
     NotificationChannel,
     NotificationRule,
     NotificationRuleEventType,
   } from '$lib/api/contracts'
   import { Button } from '$ui/button'
-  import { Badge } from '$ui/badge'
   import { Switch } from '$ui/switch'
   import * as Dialog from '$ui/dialog'
   import {
@@ -350,7 +350,6 @@
         {channels}
         {draft}
         {eventTypes}
-        selectedRule={editingRule}
         onDraftChange={(nextDraft: RuleDraft) => {
           draft = nextDraft
         }}
