@@ -1,9 +1,5 @@
 <script lang="ts">
-  import type {
-    NotificationChannel,
-    NotificationRule,
-    NotificationRuleEventType,
-  } from '$lib/api/contracts'
+  import type { NotificationChannel, NotificationRuleEventType } from '$lib/api/contracts'
   import { Input } from '$ui/input'
   import { Label } from '$ui/label'
   import * as Select from '$ui/select'
@@ -19,13 +15,11 @@
   let {
     channels,
     eventTypes,
-    selectedRule,
     draft,
     onDraftChange,
   }: {
     channels: NotificationChannel[]
     eventTypes: NotificationRuleEventType[]
-    selectedRule: NotificationRule | null
     draft: RuleDraft
     onDraftChange: (draft: RuleDraft) => void
   } = $props()

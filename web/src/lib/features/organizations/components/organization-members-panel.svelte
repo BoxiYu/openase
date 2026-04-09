@@ -9,6 +9,9 @@
   type MembershipRole = 'owner' | 'admin' | 'member'
 
   let {
+    heading,
+    description,
+    emptyMessage,
     counts,
     membershipsCount,
     canManageMemberships,
@@ -37,6 +40,9 @@
     onReactivate,
     onRemove,
   }: {
+    heading: string
+    description: string
+    emptyMessage: string
     counts: {
       owners: number
       active: number
@@ -107,7 +113,7 @@
   <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
     <div class="space-y-1">
       <div class="flex flex-wrap items-center gap-2">
-        <h2 class="text-base font-semibold">Members</h2>
+        <h2 class="text-base font-semibold">{heading}</h2>
         <Badge variant="secondary">{counts.active} active</Badge>
         {#if counts.invited > 0}
           <Badge variant="outline">{counts.invited} pending</Badge>
@@ -116,9 +122,7 @@
           <Badge variant="destructive">{counts.suspended} suspended</Badge>
         {/if}
       </div>
-      <p class="text-muted-foreground text-sm">
-        Active members and their roles. Role changes apply to all projects in this org.
-      </p>
+      <p class="text-muted-foreground text-sm">{description}</p>
     </div>
     <div class="flex shrink-0 flex-wrap items-center gap-2">
       <span class="text-muted-foreground text-xs">
@@ -224,7 +228,7 @@
         {/each}
       </div>
     {:else if pendingInvitations.length === 0}
-      <p class="text-muted-foreground py-4 text-sm">No accepted memberships yet.</p>
+      <p class="text-muted-foreground py-4 text-sm">{emptyMessage}</p>
     {/if}
   {/if}
 </div>

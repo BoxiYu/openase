@@ -6,8 +6,6 @@
     type RoleBinding,
   } from '$lib/api/auth'
   import { ApiError } from '$lib/api/client'
-  import type { SecuritySettingsResponse } from '$lib/api/contracts'
-  import { getSecuritySettings } from '$lib/api/openase'
   import { appStore } from '$lib/stores/app.svelte'
   import { authStore } from '$lib/stores/auth.svelte'
   import { toastStore } from '$lib/stores/toast.svelte'
@@ -26,10 +24,6 @@
     formatError,
     type BindingDraft,
   } from './security-settings-human-auth.model'
-  type Security = SecuritySettingsResponse['security']
-  let security = $state<Security | null>(null)
-  let loading = $state(false)
-  let error = $state('')
   let accessLoading = $state(false)
   let accessError = $state('')
   let mutationKey = $state('')
@@ -44,44 +38,6 @@
   const canManageProjectBindings = $derived(
     projectPermissions?.permissions.includes('rbac.manage') ?? false,
   )
-
-  $effect(() => {
-    const projectId = currentProjectId
-    if (!projectId) {
-      security = null
-      error = ''
-      return
-    }
-
-    let cancelled = false
-
-    const load = async () => {
-      loading = true
-      error = ''
-      try {
-        const payload = await getSecuritySettings(projectId)
-        if (cancelled) {
-          return
-        }
-        security = payload.security
-      } catch (caughtError) {
-        if (cancelled) {
-          return
-        }
-        security = null
-        error = formatError(caughtError, 'Failed to load access settings.')
-      } finally {
-        if (!cancelled) {
-          loading = false
-        }
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-    }
-  })
 
   async function loadProjectAccess(projectId: string) {
     const [nextPermissions, nextBindings] = await Promise.all([
@@ -191,18 +147,7 @@
       control planes.
     </p>
   </div>
-  {#if loading}
-    <div class="space-y-4">
-      <div class="bg-muted h-28 animate-pulse rounded-2xl"></div>
-      <div class="grid gap-4 xl:grid-cols-3">
-        {#each Array.from({ length: 3 }) as _, index (index)}
-          <div class="bg-muted h-44 animate-pulse rounded-2xl"></div>
-        {/each}
-      </div>
-    </div>
-  {:else if error}
-    <div class="text-destructive rounded-lg border px-4 py-3 text-sm">{error}</div>
-  {:else if !authStore.loginRequired}
+  {#if !authStore.loginRequired}
     <AccessSettingsDisabledCard />
   {:else if !authStore.authenticated}
     <SecuritySettingsHumanAuthSignInHint />

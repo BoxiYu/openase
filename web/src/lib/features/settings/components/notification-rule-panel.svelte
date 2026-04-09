@@ -5,9 +5,6 @@
     NotificationRuleEventType,
   } from '$lib/api/contracts'
   import { Button } from '$ui/button'
-  import { Badge } from '$ui/badge'
-  import { Switch } from '$ui/switch'
-  import * as Dialog from '$ui/dialog'
   import {
     buildCreateRuleInput,
     buildUpdateRuleInput,
@@ -21,8 +18,9 @@
   import { actionErrorMessage } from '../notification-support'
   import { toastStore } from '$lib/stores/toast.svelte'
   import { buildEventCatalog, getSeverity } from '../notification-event-catalog'
-  import NotificationRuleEditor from './notification-rule-editor.svelte'
+  import NotificationRuleDialog from './notification-rule-dialog.svelte'
   import NotificationEventGroup from './notification-event-group.svelte'
+  import NotificationRuleList from './notification-rule-list.svelte'
 
   let {
     channels,
@@ -193,96 +191,16 @@
     {/if}
   </div>
 
-  <!-- Rules list (when rules exist) or empty state -->
-  {#if !canCreateRule}
-    <div
-      class="border-border bg-muted/30 flex flex-col items-center gap-2 rounded-lg border border-dashed px-6 py-8 text-center"
-    >
-      <p class="text-muted-foreground text-sm">Add a channel first to create notification rules.</p>
-    </div>
-  {:else if rules.length === 0}
-    <div
-      class="border-border bg-muted/30 flex flex-col items-center gap-2 rounded-lg border border-dashed px-6 py-8 text-center"
-    >
-      <p class="text-muted-foreground text-sm">No notification rules yet.</p>
-      <p class="text-muted-foreground text-xs">
-        Browse available events below and click "+ Add rule" to subscribe.
-      </p>
-    </div>
-  {:else}
-    <!-- Rules table -->
-    <div class="border-border bg-card rounded-md border">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b">
-            <th class="text-muted-foreground px-4 py-2.5 text-left text-xs font-medium">Rule</th>
-            <th
-              class="text-muted-foreground hidden px-4 py-2.5 text-left text-xs font-medium sm:table-cell"
-              >Event</th
-            >
-            <th
-              class="text-muted-foreground hidden px-4 py-2.5 text-left text-xs font-medium md:table-cell"
-              >Channel</th
-            >
-            <th
-              class="text-muted-foreground hidden px-4 py-2.5 text-left text-xs font-medium lg:table-cell"
-              >Severity</th
-            >
-            <th class="px-4 py-2.5 text-right"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each rules as rule (rule.id)}
-            {@const et = findEventType(eventTypes, rule.event_type)}
-            <tr class="border-b last:border-0">
-              <td class="px-4 py-3">
-                <div class="font-medium">{rule.name}</div>
-                <div class="text-muted-foreground mt-0.5 block text-xs sm:hidden">
-                  {et?.label ?? rule.event_type}
-                  {#if !rule.channel.is_enabled}
-                    <span class="text-amber-500">· channel disabled</span>
-                  {/if}
-                </div>
-              </td>
-              <td class="text-muted-foreground hidden px-4 py-3 text-xs sm:table-cell">
-                {et?.label ?? rule.event_type}
-                {#if !rule.channel.is_enabled}
-                  <div class="mt-0.5 text-amber-500">channel disabled</div>
-                {/if}
-              </td>
-              <td class="text-muted-foreground hidden px-4 py-3 text-xs md:table-cell">
-                {rule.channel.name}
-              </td>
-              <td class="hidden px-4 py-3 lg:table-cell">
-                <span class="flex items-center gap-1.5 text-xs">
-                  <span class="size-2 shrink-0 rounded-full {severityClass(rule.event_type)}"
-                  ></span>
-                  {severityLabel(rule.event_type)}
-                </span>
-              </td>
-              <td class="px-4 py-3">
-                <div class="flex items-center justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="h-7 px-2 text-xs"
-                    onclick={() => openEditRule(rule)}
-                  >
-                    Edit
-                  </Button>
-                  <Switch
-                    checked={rule.is_enabled}
-                    disabled={togglingId === rule.id}
-                    onCheckedChange={() => handleToggleRule(rule)}
-                  />
-                </div>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
+  <NotificationRuleList
+    {canCreateRule}
+    {rules}
+    {eventTypes}
+    {togglingId}
+    {severityClass}
+    {severityLabel}
+    onEditRule={openEditRule}
+    onToggleRule={handleToggleRule}
+  />
 
   {#if canCreateRule}
     <!-- Event catalog -->
@@ -328,76 +246,23 @@
   {/if}
 </div>
 
-<!-- Rule create / edit dialog -->
-<Dialog.Root
-  bind:open={dialogOpen}
-  onOpenChange={(open) => {
+<NotificationRuleDialog
+  {channels}
+  {eventTypes}
+  {editingRule}
+  {draft}
+  {dialogOpen}
+  {confirmDeleteOpen}
+  {saving}
+  {deleting}
+  onDialogOpenChange={(open) => {
     if (!open) closeDialog()
+    else dialogOpen = true
   }}
->
-  <Dialog.Content class="flex flex-col sm:max-w-2xl">
-    <Dialog.Header>
-      <Dialog.Title>{editingRule ? 'Edit rule' : 'New rule'}</Dialog.Title>
-      {#if editingRule}
-        <Dialog.Description>{editingRule.name}</Dialog.Description>
-      {:else}
-        <Dialog.Description>Route a project event to a notification channel.</Dialog.Description>
-      {/if}
-    </Dialog.Header>
-
-    <div class="min-h-0 overflow-y-auto">
-      <NotificationRuleEditor
-        {channels}
-        {draft}
-        {eventTypes}
-        selectedRule={editingRule}
-        onDraftChange={(nextDraft: RuleDraft) => {
-          draft = nextDraft
-        }}
-      />
-    </div>
-
-    <Dialog.Footer>
-      {#if editingRule}
-        <Button
-          variant="destructive"
-          onclick={() => (confirmDeleteOpen = true)}
-          disabled={saving || deleting}
-          class="mr-auto"
-        >
-          Delete
-        </Button>
-      {/if}
-      <Dialog.Close>
-        {#snippet child({ props })}
-          <Button variant="outline" {...props} disabled={saving || deleting}>Cancel</Button>
-        {/snippet}
-      </Dialog.Close>
-      <Button onclick={handleSave} disabled={saving || deleting}>
-        {saving ? 'Saving…' : editingRule ? 'Save changes' : 'Create rule'}
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
-
-<!-- Delete confirmation dialog -->
-<Dialog.Root bind:open={confirmDeleteOpen}>
-  <Dialog.Content class="sm:max-w-sm">
-    <Dialog.Header>
-      <Dialog.Title>Delete "{editingRule?.name}"?</Dialog.Title>
-      <Dialog.Description>
-        This rule will stop delivering notifications. This cannot be undone.
-      </Dialog.Description>
-    </Dialog.Header>
-    <Dialog.Footer>
-      <Dialog.Close>
-        {#snippet child({ props })}
-          <Button variant="outline" {...props} disabled={deleting}>Cancel</Button>
-        {/snippet}
-      </Dialog.Close>
-      <Button variant="destructive" onclick={handleDelete} disabled={deleting}>
-        {deleting ? 'Deleting…' : 'Delete rule'}
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+  onConfirmDeleteOpenChange={(open) => (confirmDeleteOpen = open)}
+  onDraftChange={(nextDraft) => {
+    draft = nextDraft
+  }}
+  onSave={handleSave}
+  onDelete={handleDelete}
+/>

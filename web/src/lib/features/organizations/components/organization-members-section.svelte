@@ -60,6 +60,8 @@
   const activeMembers = $derived(
     memberships.filter((item) => !item.activeInvitation && item.status !== 'removed'),
   )
+  const panelPendingInvitations = $derived(mode === 'members' ? [] : pendingInvitations)
+  const panelActiveMembers = $derived(mode === 'invitations' ? [] : activeMembers)
 
   function setBusy(key: string, active: boolean) {
     if (active) {
@@ -272,9 +274,11 @@
 
 <!-- prettier-ignore -->
 <OrganizationMembersPanel {counts} membershipsCount={memberships.length}
+  {heading} {description} {emptyMessage}
   {canManageMemberships} {canManagePrivilegedRoles} bind:inviteEmail bind:inviteRole
   {submittingInvite} {recentInviteToken} {recentInviteEmail} {loading}
-  {pendingInvitations} {activeMembers} {currentUserId} {roleDrafts} {canManageEntry} {roleOptionsForEntry}
+  pendingInvitations={panelPendingInvitations} activeMembers={panelActiveMembers}
+  {currentUserId} {roleDrafts} {canManageEntry} {roleOptionsForEntry}
   {isBusy} onInvite={handleInvite}
   onCopyToken={async () => {
     try {

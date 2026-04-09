@@ -2,7 +2,6 @@
   import type { NotificationChannel } from '$lib/api/contracts'
   import { Badge } from '$ui/badge'
   import { Button } from '$ui/button'
-  import * as Dialog from '$ui/dialog'
   import { Switch } from '$ui/switch'
   import {
     buildCreateChannelInput,
@@ -15,7 +14,7 @@
   } from '../notification-channels'
   import { actionErrorMessage } from '../notification-support'
   import { toastStore } from '$lib/stores/toast.svelte'
-  import NotificationChannelEditor from './notification-channel-editor.svelte'
+  import NotificationChannelDialog from './notification-channel-dialog.svelte'
 
   let {
     channels,
@@ -232,74 +231,21 @@
   {/if}
 </div>
 
-<!-- Channel create / edit dialog -->
-<Dialog.Root
-  bind:open={dialogOpen}
-  onOpenChange={(open) => {
+<NotificationChannelDialog
+  {editingChannel}
+  {draft}
+  {dialogOpen}
+  {confirmDeleteOpen}
+  {saving}
+  {deleting}
+  onDialogOpenChange={(open) => {
     if (!open) closeDialog()
+    else dialogOpen = true
   }}
->
-  <Dialog.Content class="sm:max-w-lg">
-    <Dialog.Header>
-      <Dialog.Title>{editingChannel ? 'Edit channel' : 'New channel'}</Dialog.Title>
-      {#if editingChannel}
-        <Dialog.Description>{editingChannel.name}</Dialog.Description>
-      {:else}
-        <Dialog.Description>Configure a new notification delivery endpoint.</Dialog.Description>
-      {/if}
-    </Dialog.Header>
-
-    <div class="overflow-y-auto">
-      <NotificationChannelEditor
-        {draft}
-        selectedChannel={editingChannel}
-        onDraftChange={(nextDraft) => {
-          draft = nextDraft
-        }}
-      />
-    </div>
-
-    <Dialog.Footer>
-      {#if editingChannel}
-        <Button
-          variant="destructive"
-          onclick={() => (confirmDeleteOpen = true)}
-          disabled={saving || deleting}
-          class="mr-auto"
-        >
-          Delete
-        </Button>
-      {/if}
-      <Dialog.Close>
-        {#snippet child({ props })}
-          <Button variant="outline" {...props} disabled={saving || deleting}>Cancel</Button>
-        {/snippet}
-      </Dialog.Close>
-      <Button onclick={handleSave} disabled={saving || deleting}>
-        {saving ? 'Saving…' : editingChannel ? 'Save changes' : 'Create channel'}
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
-
-<!-- Delete confirmation dialog -->
-<Dialog.Root bind:open={confirmDeleteOpen}>
-  <Dialog.Content class="sm:max-w-sm">
-    <Dialog.Header>
-      <Dialog.Title>Delete {editingChannel?.name}?</Dialog.Title>
-      <Dialog.Description>
-        This removes the channel and any rules that route to it. This cannot be undone.
-      </Dialog.Description>
-    </Dialog.Header>
-    <Dialog.Footer>
-      <Dialog.Close>
-        {#snippet child({ props })}
-          <Button variant="outline" {...props} disabled={deleting}>Cancel</Button>
-        {/snippet}
-      </Dialog.Close>
-      <Button variant="destructive" onclick={handleDelete} disabled={deleting}>
-        {deleting ? 'Deleting…' : 'Delete channel'}
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+  onConfirmDeleteOpenChange={(open) => (confirmDeleteOpen = open)}
+  onDraftChange={(nextDraft) => {
+    draft = nextDraft
+  }}
+  onSave={handleSave}
+  onDelete={handleDelete}
+/>

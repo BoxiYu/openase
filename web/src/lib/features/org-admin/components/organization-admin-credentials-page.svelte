@@ -10,10 +10,8 @@
   } from '$lib/api/openase'
   import { toastStore } from '$lib/stores/toast.svelte'
   import { Button } from '$ui/button'
-  import * as Dialog from '$ui/dialog'
-  import { Input } from '$ui/input'
-  import { Label } from '$ui/label'
   import { KeyRound, LoaderCircle, RefreshCw, Trash2, Upload } from '@lucide/svelte'
+  import OrganizationAdminCredentialsDialogs from './organization-admin-credentials-dialogs.svelte'
   import OrganizationAdminCredentialsLoading from './organization-admin-credentials-loading.svelte'
 
   let { organizationId }: { organizationId: string } = $props()
@@ -281,70 +279,16 @@
   {/if}
 </div>
 
-<!-- Save / Rotate token dialog -->
-<Dialog.Root bind:open={saveDialogOpen}>
-  <Dialog.Content class="sm:max-w-md">
-    <Dialog.Header>
-      <Dialog.Title>
-        {credential?.configured ? 'Rotate GitHub token' : 'Save GitHub token'}
-      </Dialog.Title>
-      <Dialog.Description>
-        {#if credential?.configured}
-          Paste the replacement token. The previous value is immediately overwritten and cannot be
-          recovered.
-        {:else}
-          Paste a GitHub personal access token (<code>ghu_xxx</code> or
-          <code>github_pat_xxx</code>). It will be masked after saving.
-        {/if}
-      </Dialog.Description>
-    </Dialog.Header>
-
-    <div class="space-y-1.5">
-      <Label for="credentials-token">Token</Label>
-      <Input
-        id="credentials-token"
-        type="password"
-        bind:value={tokenDraft}
-        placeholder="ghu_xxx or github_pat_xxx"
-        disabled={anyBusy}
-        onkeydown={(e) => {
-          if (e.key === 'Enter') mutate('save')
-        }}
-      />
-    </div>
-
-    <Dialog.Footer>
-      <Dialog.Close>
-        {#snippet child({ props })}
-          <Button variant="outline" {...props} disabled={anyBusy}>Cancel</Button>
-        {/snippet}
-      </Dialog.Close>
-      <Button onclick={() => mutate('save')} disabled={anyBusy || !tokenDraft.trim()}>
-        {actionKey === 'save' ? 'Saving…' : credential?.configured ? 'Rotate token' : 'Save token'}
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
-
-<!-- Delete confirmation dialog -->
-<Dialog.Root bind:open={deleteDialogOpen}>
-  <Dialog.Content class="sm:max-w-sm">
-    <Dialog.Header>
-      <Dialog.Title>Remove GitHub credential?</Dialog.Title>
-      <Dialog.Description>
-        All projects that inherit this org credential will lose GitHub access until a new credential
-        is saved or each project sets its own override.
-      </Dialog.Description>
-    </Dialog.Header>
-    <Dialog.Footer>
-      <Dialog.Close>
-        {#snippet child({ props })}
-          <Button variant="outline" {...props} disabled={anyBusy}>Cancel</Button>
-        {/snippet}
-      </Dialog.Close>
-      <Button variant="destructive" onclick={() => mutate('delete')} disabled={anyBusy}>
-        {actionKey === 'delete' ? 'Deleting…' : 'Delete credential'}
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+<OrganizationAdminCredentialsDialogs
+  {credential}
+  {saveDialogOpen}
+  {deleteDialogOpen}
+  {tokenDraft}
+  {anyBusy}
+  {actionKey}
+  onSaveOpenChange={(open) => (saveDialogOpen = open)}
+  onDeleteOpenChange={(open) => (deleteDialogOpen = open)}
+  onTokenDraftChange={(value) => (tokenDraft = value)}
+  onSave={() => mutate('save')}
+  onDelete={() => mutate('delete')}
+/>
