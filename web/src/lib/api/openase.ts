@@ -1,5 +1,9 @@
 import { api } from './client'
-import type { SessionGovernanceResponse } from './auth'
+import {
+  getSessionGovernance as getAuthSessionGovernance,
+  revokeAllOtherAuthSessions as revokeAllOtherAuthSessionsViaAuth,
+  revokeAuthSession as revokeAuthSessionViaAuth,
+} from './auth'
 import type {
   ActivityPayload,
   AdminAuthModeTransitionResponse,
@@ -591,15 +595,15 @@ export function enableOIDC(
 }
 
 export function getSessionGovernance() {
-  return api.get<SessionGovernanceResponse>('/api/v1/auth/sessions')
+  return getAuthSessionGovernance()
 }
 
 export function revokeAuthSession(id: string) {
-  return api.delete<void>(`/api/v1/auth/sessions/${id}`)
+  return revokeAuthSessionViaAuth(id)
 }
 
 export function revokeAllOtherAuthSessions() {
-  return api.post<{ revoked_count: number }>('/api/v1/auth/sessions/revoke-all')
+  return revokeAllOtherAuthSessionsViaAuth()
 }
 
 export function adminRevokeUserAuthSessions(userId: string) {

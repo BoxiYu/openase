@@ -35,7 +35,11 @@ export default defineConfig(({ mode }) => {
           proxy: {
             '/api': {
               target: proxyTarget,
-              changeOrigin: true,
+              // Preserve the browser-facing dev origin so backend redirects and
+              // auto-derived URLs stay on the Vite host instead of flipping to
+              // the raw proxy target.
+              changeOrigin: false,
+              xfwd: true,
             },
           },
         }
