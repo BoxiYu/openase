@@ -15,11 +15,9 @@
   } from '$lib/api/openase'
   import { authStore } from '$lib/stores/auth.svelte'
   import { toastStore } from '$lib/stores/toast.svelte'
-  import { SecuritySettingsHumanAuthGuideLinks } from '$lib/features/settings'
   import AdminAuthDiagnostics from './admin-auth-diagnostics.svelte'
   import AdminAuthForm from './admin-auth-form.svelte'
   import AdminAuthOverview from './admin-auth-overview.svelte'
-  import AdminAuthRuntimeDetails from './admin-auth-runtime-details.svelte'
 
   type OIDCFormState = {
     issuerURL: string
@@ -34,7 +32,6 @@
 
   let loading = $state(false)
   let error = $state('')
-  let errorCode = $state('')
   let actionKey = $state('')
   let auth = $state<SecurityAuthSettings | null>(null)
   let transition = $state<AdminAuthModeTransitionResponse['transition'] | null>(null)
@@ -111,16 +108,10 @@
   ) {
     actionKey = key
     error = ''
-    errorCode = ''
     try {
       await runner()
     } catch (caughtError) {
-      if (caughtError instanceof ApiError) {
-        error = caughtError.detail
-        errorCode = caughtError.code ?? ''
-      } else {
-        error = failureFallback
-      }
+      error = caughtError instanceof ApiError ? caughtError.detail : failureFallback
       toastStore.error(error)
     } finally {
       actionKey = ''
@@ -154,9 +145,9 @@
         auth = payload.auth
         syncForm(payload.auth)
         transition = null
-        toastStore.success('Draft saved.')
+        toastStore.success('OIDC draft saved for the instance. Active auth mode stays unchanged.')
       },
-      'Failed to save draft.',
+      'Failed to save the instance auth draft.',
     )
   }
 
@@ -167,11 +158,9 @@
         const payload = await testAdminOIDCDraft(oidcDraftPayload())
         applyValidationResult(payload)
         transition = null
-        toastStore.success(
-          payload.issuer_url ? `Validation passed — ${payload.issuer_url}` : 'Validation passed.',
-        )
+        toastStore.success('OIDC provider discovery succeeded.')
       },
-      'Validation failed.',
+      'Failed to validate the OIDC provider.',
     )
     if (error) {
       await refreshAuth()
@@ -186,9 +175,9 @@
         auth = payload.auth
         syncForm(payload.auth)
         transition = payload.transition
-        toastStore.success('OIDC activated.')
+        toastStore.success('OIDC is now the configured auth mode for the instance.')
       },
-      'Failed to activate OIDC.',
+      'Failed to enable OIDC for the instance.',
     )
     if (error) {
       await refreshAuth()
@@ -203,9 +192,11 @@
         auth = payload.auth
         syncForm(payload.auth)
         transition = payload.transition
-        toastStore.success('Switched to local bootstrap.')
+        toastStore.success(
+          'OIDC is now inactive. Use local bootstrap until you are ready to retry rollout.',
+        )
       },
-      'Failed to disable OIDC.',
+      'Failed to switch the instance back to local bootstrap access.',
     )
   }
 
@@ -216,32 +207,27 @@
 
 <PageScaffold
   title="Admin Auth"
-  description="Instance browser authentication and OIDC provider settings."
+  description="Current browser auth method, OIDC draft state, validation diagnostics, and activation controls."
 >
   {#if loading}
     <div class="space-y-4">
-      <div class="bg-muted h-32 animate-pulse rounded-2xl"></div>
-      <div class="bg-muted h-64 animate-pulse rounded-2xl"></div>
+      <div class="bg-muted h-24 animate-pulse rounded-xl"></div>
+      <div class="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <div class="bg-muted h-96 animate-pulse rounded-xl"></div>
+        <div class="bg-muted h-96 animate-pulse rounded-xl"></div>
+      </div>
     </div>
-  {:else if error && !auth}
+  {:else if error}
     <div class="text-destructive rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm">
       {error}
     </div>
   {:else if auth}
-    <div class="space-y-4">
-      {#if error}
-        <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-          <div class="text-sm text-red-900">{error}</div>
-          {#if errorCode}
-            <div class="mt-1 font-mono text-xs text-red-700">{errorCode}</div>
-          {/if}
-        </div>
-      {/if}
+    <div class="space-y-6">
+      <div class="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <AdminAuthOverview {auth} user={authStore.user} />
+        <AdminAuthDiagnostics {auth} {transition} />
+      </div>
 
-      <!-- 1. Hero: current auth status -->
-      <AdminAuthOverview {auth} user={authStore.user} />
-
-      <!-- 2. OIDC configuration form -->
       <AdminAuthForm
         {auth}
         bind:form={oidcForm}
@@ -251,17 +237,6 @@
         onEnable={() => void handleEnable()}
         onDisable={() => void handleDisable()}
       />
-
-      <!-- 3. Diagnostics (collapsible) -->
-      <AdminAuthDiagnostics {auth} {transition} />
-
-      <!-- 4. Runtime details (collapsible) -->
-      <AdminAuthRuntimeDetails {auth} />
-
-      <!-- 5. Guide links -->
-      {#if auth.docs.length > 0}
-        <SecuritySettingsHumanAuthGuideLinks docs={auth.docs} />
-      {/if}
     </div>
   {/if}
 </PageScaffold>
