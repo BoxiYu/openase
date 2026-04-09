@@ -303,7 +303,8 @@ export function saveAdminOIDCDraft(body: {
   issuer_url: string
   client_id: string
   client_secret?: string
-  redirect_url: string
+  redirect_mode: string
+  fixed_redirect_url: string
   scopes: string[]
   allowed_email_domains: string[]
   bootstrap_admin_emails: string[]
@@ -315,7 +316,8 @@ export function testAdminOIDCDraft(body: {
   issuer_url: string
   client_id: string
   client_secret?: string
-  redirect_url: string
+  redirect_mode: string
+  fixed_redirect_url: string
   scopes: string[]
   allowed_email_domains: string[]
   bootstrap_admin_emails: string[]
@@ -327,7 +329,8 @@ export function enableAdminOIDC(body: {
   issuer_url: string
   client_id: string
   client_secret?: string
-  redirect_url: string
+  redirect_mode: string
+  fixed_redirect_url: string
   scopes: string[]
   allowed_email_domains: string[]
   bootstrap_admin_emails: string[]
@@ -457,7 +460,8 @@ export function saveOIDCDraft(
     issuer_url: string
     client_id: string
     client_secret?: string
-    redirect_url: string
+    redirect_mode: string
+    fixed_redirect_url: string
     scopes: string[]
     allowed_email_domains: string[]
     bootstrap_admin_emails: string[]
@@ -477,7 +481,8 @@ export function testOIDCDraft(
     issuer_url: string
     client_id: string
     client_secret?: string
-    redirect_url: string
+    redirect_mode: string
+    fixed_redirect_url: string
     scopes: string[]
     allowed_email_domains: string[]
     bootstrap_admin_emails: string[]
@@ -495,7 +500,8 @@ export function enableOIDC(
     issuer_url: string
     client_id: string
     client_secret?: string
-    redirect_url: string
+    redirect_mode: string
+    fixed_redirect_url: string
     scopes: string[]
     allowed_email_domains: string[]
     bootstrap_admin_emails: string[]

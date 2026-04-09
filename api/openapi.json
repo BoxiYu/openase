@@ -129,10 +129,13 @@
                             "client_secret_configured": {
                               "type": "boolean"
                             },
+                            "fixed_redirect_url": {
+                              "type": "string"
+                            },
                             "issuer_url": {
                               "type": "string"
                             },
-                            "redirect_url": {
+                            "redirect_mode": {
                               "type": "string"
                             },
                             "scopes": {
@@ -360,10 +363,13 @@
                             "client_secret_configured": {
                               "type": "boolean"
                             },
+                            "fixed_redirect_url": {
+                              "type": "string"
+                            },
                             "issuer_url": {
                               "type": "string"
                             },
-                            "redirect_url": {
+                            "redirect_mode": {
                               "type": "string"
                             },
                             "scopes": {
@@ -519,12 +525,20 @@
                     "description": "OAuth client secret stored server-side for the configured OIDC client.",
                     "type": "string"
                   },
+                  "fixed_redirect_url": {
+                    "description": "Explicit browser callback URL used only when redirect_mode=fixed.",
+                    "type": "string"
+                  },
                   "issuer_url": {
                     "description": "OIDC issuer discovery URL used to resolve the provider metadata document.",
                     "type": "string"
                   },
+                  "redirect_mode": {
+                    "description": "OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback.",
+                    "type": "string"
+                  },
                   "redirect_url": {
-                    "description": "Browser callback URL that must match the OIDC provider client registration.",
+                    "description": "Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode.",
                     "type": "string"
                   },
                   "scopes": {
@@ -661,10 +675,13 @@
                             "client_secret_configured": {
                               "type": "boolean"
                             },
+                            "fixed_redirect_url": {
+                              "type": "string"
+                            },
                             "issuer_url": {
                               "type": "string"
                             },
-                            "redirect_url": {
+                            "redirect_mode": {
                               "type": "string"
                             },
                             "scopes": {
@@ -818,12 +835,20 @@
                     "description": "OAuth client secret stored server-side for the configured OIDC client.",
                     "type": "string"
                   },
+                  "fixed_redirect_url": {
+                    "description": "Explicit browser callback URL used only when redirect_mode=fixed.",
+                    "type": "string"
+                  },
                   "issuer_url": {
                     "description": "OIDC issuer discovery URL used to resolve the provider metadata document.",
                     "type": "string"
                   },
+                  "redirect_mode": {
+                    "description": "OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback.",
+                    "type": "string"
+                  },
                   "redirect_url": {
-                    "description": "Browser callback URL that must match the OIDC provider client registration.",
+                    "description": "Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode.",
                     "type": "string"
                   },
                   "scopes": {
@@ -1005,12 +1030,20 @@
                     "description": "OAuth client secret stored server-side for the configured OIDC client.",
                     "type": "string"
                   },
+                  "fixed_redirect_url": {
+                    "description": "Explicit browser callback URL used only when redirect_mode=fixed.",
+                    "type": "string"
+                  },
                   "issuer_url": {
                     "description": "OIDC issuer discovery URL used to resolve the provider metadata document.",
                     "type": "string"
                   },
+                  "redirect_mode": {
+                    "description": "OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback.",
+                    "type": "string"
+                  },
                   "redirect_url": {
-                    "description": "Browser callback URL that must match the OIDC provider client registration.",
+                    "description": "Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode.",
                     "type": "string"
                   },
                   "scopes": {
@@ -1147,10 +1180,13 @@
                             "client_secret_configured": {
                               "type": "boolean"
                             },
+                            "fixed_redirect_url": {
+                              "type": "string"
+                            },
                             "issuer_url": {
                               "type": "string"
                             },
-                            "redirect_url": {
+                            "redirect_mode": {
                               "type": "string"
                             },
                             "scopes": {
@@ -20334,10 +20370,13 @@
                                 "client_secret_configured": {
                                   "type": "boolean"
                                 },
+                                "fixed_redirect_url": {
+                                  "type": "string"
+                                },
                                 "issuer_url": {
                                   "type": "string"
                                 },
-                                "redirect_url": {
+                                "redirect_mode": {
                                   "type": "string"
                                 },
                                 "scopes": {
@@ -20866,10 +20905,13 @@
                                 "client_secret_configured": {
                                   "type": "boolean"
                                 },
+                                "fixed_redirect_url": {
+                                  "type": "string"
+                                },
                                 "issuer_url": {
                                   "type": "string"
                                 },
-                                "redirect_url": {
+                                "redirect_mode": {
                                   "type": "string"
                                 },
                                 "scopes": {
@@ -21413,10 +21455,13 @@
                                 "client_secret_configured": {
                                   "type": "boolean"
                                 },
+                                "fixed_redirect_url": {
+                                  "type": "string"
+                                },
                                 "issuer_url": {
                                   "type": "string"
                                 },
-                                "redirect_url": {
+                                "redirect_mode": {
                                   "type": "string"
                                 },
                                 "scopes": {
@@ -21945,10 +21990,13 @@
                                 "client_secret_configured": {
                                   "type": "boolean"
                                 },
+                                "fixed_redirect_url": {
+                                  "type": "string"
+                                },
                                 "issuer_url": {
                                   "type": "string"
                                 },
-                                "redirect_url": {
+                                "redirect_mode": {
                                   "type": "string"
                                 },
                                 "scopes": {
@@ -22477,10 +22525,13 @@
                                 "client_secret_configured": {
                                   "type": "boolean"
                                 },
+                                "fixed_redirect_url": {
+                                  "type": "string"
+                                },
                                 "issuer_url": {
                                   "type": "string"
                                 },
-                                "redirect_url": {
+                                "redirect_mode": {
                                   "type": "string"
                                 },
                                 "scopes": {
@@ -22858,12 +22909,20 @@
                     "description": "OAuth client secret stored server-side for the configured OIDC client.",
                     "type": "string"
                   },
+                  "fixed_redirect_url": {
+                    "description": "Explicit browser callback URL used only when redirect_mode=fixed.",
+                    "type": "string"
+                  },
                   "issuer_url": {
                     "description": "OIDC issuer discovery URL used to resolve the provider metadata document.",
                     "type": "string"
                   },
+                  "redirect_mode": {
+                    "description": "OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback.",
+                    "type": "string"
+                  },
                   "redirect_url": {
-                    "description": "Browser callback URL that must match the OIDC provider client registration.",
+                    "description": "Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode.",
                     "type": "string"
                   },
                   "scopes": {
@@ -23059,10 +23118,13 @@
                                 "client_secret_configured": {
                                   "type": "boolean"
                                 },
+                                "fixed_redirect_url": {
+                                  "type": "string"
+                                },
                                 "issuer_url": {
                                   "type": "string"
                                 },
-                                "redirect_url": {
+                                "redirect_mode": {
                                   "type": "string"
                                 },
                                 "scopes": {
@@ -23440,12 +23502,20 @@
                     "description": "OAuth client secret stored server-side for the configured OIDC client.",
                     "type": "string"
                   },
+                  "fixed_redirect_url": {
+                    "description": "Explicit browser callback URL used only when redirect_mode=fixed.",
+                    "type": "string"
+                  },
                   "issuer_url": {
                     "description": "OIDC issuer discovery URL used to resolve the provider metadata document.",
                     "type": "string"
                   },
+                  "redirect_mode": {
+                    "description": "OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback.",
+                    "type": "string"
+                  },
                   "redirect_url": {
-                    "description": "Browser callback URL that must match the OIDC provider client registration.",
+                    "description": "Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode.",
                     "type": "string"
                   },
                   "scopes": {
@@ -23639,12 +23709,20 @@
                     "description": "OAuth client secret stored server-side for the configured OIDC client.",
                     "type": "string"
                   },
+                  "fixed_redirect_url": {
+                    "description": "Explicit browser callback URL used only when redirect_mode=fixed.",
+                    "type": "string"
+                  },
                   "issuer_url": {
                     "description": "OIDC issuer discovery URL used to resolve the provider metadata document.",
                     "type": "string"
                   },
+                  "redirect_mode": {
+                    "description": "OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback.",
+                    "type": "string"
+                  },
                   "redirect_url": {
-                    "description": "Browser callback URL that must match the OIDC provider client registration.",
+                    "description": "Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode.",
                     "type": "string"
                   },
                   "scopes": {
@@ -23860,10 +23938,13 @@
                                 "client_secret_configured": {
                                   "type": "boolean"
                                 },
+                                "fixed_redirect_url": {
+                                  "type": "string"
+                                },
                                 "issuer_url": {
                                   "type": "string"
                                 },
-                                "redirect_url": {
+                                "redirect_mode": {
                                   "type": "string"
                                 },
                                 "scopes": {

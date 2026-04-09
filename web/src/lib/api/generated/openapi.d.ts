@@ -2766,8 +2766,9 @@ export interface operations {
                 bootstrap_admin_emails?: string[]
                 client_id?: string
                 client_secret_configured?: boolean
+                fixed_redirect_url?: string
                 issuer_url?: string
-                redirect_url?: string
+                redirect_mode?: string
                 scopes?: string[]
               }
               public_exposure_risk?: string
@@ -2868,8 +2869,9 @@ export interface operations {
                 bootstrap_admin_emails?: string[]
                 client_id?: string
                 client_secret_configured?: boolean
+                fixed_redirect_url?: string
                 issuer_url?: string
-                redirect_url?: string
+                redirect_mode?: string
                 scopes?: string[]
               }
               public_exposure_risk?: string
@@ -2946,9 +2948,13 @@ export interface operations {
           client_id?: string
           /** @description OAuth client secret stored server-side for the configured OIDC client. */
           client_secret?: string
+          /** @description Explicit browser callback URL used only when redirect_mode=fixed. */
+          fixed_redirect_url?: string
           /** @description OIDC issuer discovery URL used to resolve the provider metadata document. */
           issuer_url?: string
-          /** @description Browser callback URL that must match the OIDC provider client registration. */
+          /** @description OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback. */
+          redirect_mode?: string
+          /** @description Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode. */
           redirect_url?: string
           /** @description OIDC scopes requested during the authorization-code flow. */
           scopes?: string[]
@@ -2996,8 +3002,9 @@ export interface operations {
                 bootstrap_admin_emails?: string[]
                 client_id?: string
                 client_secret_configured?: boolean
+                fixed_redirect_url?: string
                 issuer_url?: string
-                redirect_url?: string
+                redirect_mode?: string
                 scopes?: string[]
               }
               public_exposure_risk?: string
@@ -3080,9 +3087,13 @@ export interface operations {
           client_id?: string
           /** @description OAuth client secret stored server-side for the configured OIDC client. */
           client_secret?: string
+          /** @description Explicit browser callback URL used only when redirect_mode=fixed. */
+          fixed_redirect_url?: string
           /** @description OIDC issuer discovery URL used to resolve the provider metadata document. */
           issuer_url?: string
-          /** @description Browser callback URL that must match the OIDC provider client registration. */
+          /** @description OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback. */
+          redirect_mode?: string
+          /** @description Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode. */
           redirect_url?: string
           /** @description OIDC scopes requested during the authorization-code flow. */
           scopes?: string[]
@@ -3188,9 +3199,13 @@ export interface operations {
           client_id?: string
           /** @description OAuth client secret stored server-side for the configured OIDC client. */
           client_secret?: string
+          /** @description Explicit browser callback URL used only when redirect_mode=fixed. */
+          fixed_redirect_url?: string
           /** @description OIDC issuer discovery URL used to resolve the provider metadata document. */
           issuer_url?: string
-          /** @description Browser callback URL that must match the OIDC provider client registration. */
+          /** @description OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback. */
+          redirect_mode?: string
+          /** @description Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode. */
           redirect_url?: string
           /** @description OIDC scopes requested during the authorization-code flow. */
           scopes?: string[]
@@ -3238,8 +3253,9 @@ export interface operations {
                 bootstrap_admin_emails?: string[]
                 client_id?: string
                 client_secret_configured?: boolean
+                fixed_redirect_url?: string
                 issuer_url?: string
-                redirect_url?: string
+                redirect_mode?: string
                 scopes?: string[]
               }
               public_exposure_risk?: string
@@ -13459,8 +13475,9 @@ export interface operations {
                   bootstrap_admin_emails?: string[]
                   client_id?: string
                   client_secret_configured?: boolean
+                  fixed_redirect_url?: string
                   issuer_url?: string
-                  redirect_url?: string
+                  redirect_mode?: string
                   scopes?: string[]
                 }
                 public_exposure_risk?: string
@@ -13676,8 +13693,9 @@ export interface operations {
                   bootstrap_admin_emails?: string[]
                   client_id?: string
                   client_secret_configured?: boolean
+                  fixed_redirect_url?: string
                   issuer_url?: string
-                  redirect_url?: string
+                  redirect_mode?: string
                   scopes?: string[]
                 }
                 public_exposure_risk?: string
@@ -13885,8 +13903,9 @@ export interface operations {
                   bootstrap_admin_emails?: string[]
                   client_id?: string
                   client_secret_configured?: boolean
+                  fixed_redirect_url?: string
                   issuer_url?: string
-                  redirect_url?: string
+                  redirect_mode?: string
                   scopes?: string[]
                 }
                 public_exposure_risk?: string
@@ -14094,8 +14113,9 @@ export interface operations {
                   bootstrap_admin_emails?: string[]
                   client_id?: string
                   client_secret_configured?: boolean
+                  fixed_redirect_url?: string
                   issuer_url?: string
-                  redirect_url?: string
+                  redirect_mode?: string
                   scopes?: string[]
                 }
                 public_exposure_risk?: string
@@ -14303,8 +14323,9 @@ export interface operations {
                   bootstrap_admin_emails?: string[]
                   client_id?: string
                   client_secret_configured?: boolean
+                  fixed_redirect_url?: string
                   issuer_url?: string
-                  redirect_url?: string
+                  redirect_mode?: string
                   scopes?: string[]
                 }
                 public_exposure_risk?: string
@@ -14465,9 +14486,13 @@ export interface operations {
           client_id?: string
           /** @description OAuth client secret stored server-side for the configured OIDC client. */
           client_secret?: string
+          /** @description Explicit browser callback URL used only when redirect_mode=fixed. */
+          fixed_redirect_url?: string
           /** @description OIDC issuer discovery URL used to resolve the provider metadata document. */
           issuer_url?: string
-          /** @description Browser callback URL that must match the OIDC provider client registration. */
+          /** @description OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback. */
+          redirect_mode?: string
+          /** @description Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode. */
           redirect_url?: string
           /** @description OIDC scopes requested during the authorization-code flow. */
           scopes?: string[]
@@ -14532,8 +14557,9 @@ export interface operations {
                   bootstrap_admin_emails?: string[]
                   client_id?: string
                   client_secret_configured?: boolean
+                  fixed_redirect_url?: string
                   issuer_url?: string
-                  redirect_url?: string
+                  redirect_mode?: string
                   scopes?: string[]
                 }
                 public_exposure_risk?: string
@@ -14694,9 +14720,13 @@ export interface operations {
           client_id?: string
           /** @description OAuth client secret stored server-side for the configured OIDC client. */
           client_secret?: string
+          /** @description Explicit browser callback URL used only when redirect_mode=fixed. */
+          fixed_redirect_url?: string
           /** @description OIDC issuer discovery URL used to resolve the provider metadata document. */
           issuer_url?: string
-          /** @description Browser callback URL that must match the OIDC provider client registration. */
+          /** @description OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback. */
+          redirect_mode?: string
+          /** @description Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode. */
           redirect_url?: string
           /** @description OIDC scopes requested during the authorization-code flow. */
           scopes?: string[]
@@ -14805,9 +14835,13 @@ export interface operations {
           client_id?: string
           /** @description OAuth client secret stored server-side for the configured OIDC client. */
           client_secret?: string
+          /** @description Explicit browser callback URL used only when redirect_mode=fixed. */
+          fixed_redirect_url?: string
           /** @description OIDC issuer discovery URL used to resolve the provider metadata document. */
           issuer_url?: string
-          /** @description Browser callback URL that must match the OIDC provider client registration. */
+          /** @description OIDC redirect handling mode. Use auto to derive the callback from the current external request base URL, or fixed for a strict provider callback. */
+          redirect_mode?: string
+          /** @description Legacy alias for fixed_redirect_url. New clients should send fixed_redirect_url together with redirect_mode. */
           redirect_url?: string
           /** @description OIDC scopes requested during the authorization-code flow. */
           scopes?: string[]
@@ -14878,8 +14912,9 @@ export interface operations {
                   bootstrap_admin_emails?: string[]
                   client_id?: string
                   client_secret_configured?: boolean
+                  fixed_redirect_url?: string
                   issuer_url?: string
-                  redirect_url?: string
+                  redirect_mode?: string
                   scopes?: string[]
                 }
                 public_exposure_risk?: string
