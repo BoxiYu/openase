@@ -106,7 +106,12 @@
       {#if conversationId}
         <button
           type="button"
-          class="border-border bg-background hover:bg-muted/40 hidden rounded-md border px-2 py-1 text-[11px] font-medium transition-colors lg:inline-flex"
+          class={cn(
+            'hidden items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors lg:inline-flex',
+            browserOpen
+              ? 'bg-primary/10 text-primary hover:bg-primary/15'
+              : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+          )}
           onclick={(event) => {
             event.stopPropagation()
             onBrowse?.()

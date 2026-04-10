@@ -68,35 +68,33 @@
   class="bg-background flex h-full min-h-0 w-full flex-col"
   data-testid="project-conversation-workspace-browser"
 >
-  <div class="border-border flex items-center gap-2 border-b px-3 py-2">
-    <div class="min-w-0 flex-1">
-      <div class="flex items-center gap-1.5">
-        <FolderTree class="text-muted-foreground size-3.5 shrink-0" />
-        <h3 class="text-sm font-semibold">Workspace browser</h3>
-      </div>
-      <p class="text-muted-foreground truncate text-[11px]">
-        {browser.metadata?.workspacePath || 'Read-only view of the active Project AI workdir'}
-      </p>
-    </div>
+  <!-- Compact toolbar -->
+  <div class="border-border flex h-9 items-center gap-1.5 border-b px-3">
+    <FolderTree class="text-muted-foreground size-3 shrink-0" />
+    <span class="text-[12px] font-semibold">Workspace</span>
+    <span class="text-muted-foreground/50 min-w-0 truncate text-[11px]">
+      {browser.metadata?.workspacePath || ''}
+    </span>
+    <div class="flex-1"></div>
     <Button
       variant="ghost"
       size="sm"
-      class="text-muted-foreground size-7 p-0"
+      class="text-muted-foreground size-6 p-0"
       aria-label="Refresh workspace browser"
       onclick={() => void browser.refreshWorkspace(true)}
       disabled={!conversationId || browser.metadataLoading}
     >
-      <RefreshCcw class={cn('size-3.5', browser.metadataLoading && 'animate-spin')} />
+      <RefreshCcw class={cn('size-3', browser.metadataLoading && 'animate-spin')} />
     </Button>
     {#if onClose}
       <Button
         variant="ghost"
         size="sm"
-        class="text-muted-foreground size-7 p-0"
+        class="text-muted-foreground size-6 p-0"
         aria-label="Close workspace browser"
         onclick={onClose}
       >
-        <X class="size-3.5" />
+        <X class="size-3" />
       </Button>
     {/if}
   </div>
@@ -132,26 +130,23 @@
       The workspace will appear after Project AI provisions the conversation workdir.
     </div>
   {:else}
-    <div class="grid min-h-0 flex-1 grid-cols-[18rem_minmax(0,1fr)]">
+    <div class="grid min-h-0 flex-1 grid-cols-[clamp(14rem,22%,20rem)_minmax(0,1fr)]">
       <ProjectConversationWorkspaceBrowserSidebar
         repos={browser.metadata?.repos ?? []}
         selectedRepoPath={browser.selectedRepoPath}
         {selectedRepo}
         {selectedRepoDiff}
-        tree={browser.tree}
-        treeLoading={browser.treeLoading}
-        treeError={browser.treeError}
+        treeNodes={browser.treeNodes}
+        expandedDirs={browser.expandedDirs}
+        loadingDirs={browser.loadingDirs}
         selectedFilePath={browser.selectedFilePath}
-        currentTreePath={browser.currentTreePath}
         onOpenRepo={browser.openRepo}
-        onOpenTreePath={browser.openTreePath}
-        onOpenEntry={browser.openEntry}
-        onOpenDirtyFile={browser.openDirtyFile}
+        onToggleDir={browser.toggleDir}
+        onSelectFile={browser.selectFile}
       />
       <ProjectConversationWorkspaceBrowserDetail
         {selectedRepo}
         selectedFilePath={browser.selectedFilePath}
-        currentTreePath={browser.currentTreePath}
         preview={browser.preview}
         patch={browser.patch}
         fileLoading={browser.fileLoading}

@@ -6,7 +6,6 @@ import {
   type ProjectConversationWorkspaceFilePatch,
   type ProjectConversationWorkspaceFilePreview,
   type ProjectConversationWorkspaceMetadata,
-  type ProjectConversationWorkspaceTree,
   type ProjectConversationWorkspaceTreeEntry,
 } from '$lib/api/chat'
 
@@ -16,31 +15,58 @@ export function createProjectConversationWorkspaceBrowserState(input: {
   let metadata = $state<ProjectConversationWorkspaceMetadata | null>(null)
   let metadataLoading = $state(false)
   let metadataError = $state('')
-  let tree = $state<ProjectConversationWorkspaceTree | null>(null)
-  let treeLoading = $state(false)
-  let treeError = $state('')
+
+  // Recursive tree: directory path → child entries
+  let treeNodes = $state<Map<string, ProjectConversationWorkspaceTreeEntry[]>>(new Map())
+  let expandedDirs = $state<Set<string>>(new Set())
+  let loadingDirs = $state<Set<string>>(new Set())
+
   let preview = $state<ProjectConversationWorkspaceFilePreview | null>(null)
   let patch = $state<ProjectConversationWorkspaceFilePatch | null>(null)
   let fileLoading = $state(false)
   let fileError = $state('')
   let selectedRepoPath = $state('')
-  let currentTreePath = $state('')
   let selectedFilePath = $state('')
   let loadRequestID = 0
+
+  function setTreeEntries(dirPath: string, entries: ProjectConversationWorkspaceTreeEntry[]) {
+    const nextTreeNodes = new Map(treeNodes)
+    nextTreeNodes.set(dirPath, entries)
+    treeNodes = nextTreeNodes
+  }
+
+  function setDirLoading(dirPath: string, loading: boolean) {
+    const nextLoadingDirs = new Set(loadingDirs)
+    if (loading) {
+      nextLoadingDirs.add(dirPath)
+    } else {
+      nextLoadingDirs.delete(dirPath)
+    }
+    loadingDirs = nextLoadingDirs
+  }
+
+  function setDirExpanded(dirPath: string, expanded: boolean) {
+    const nextExpandedDirs = new Set(expandedDirs)
+    if (expanded) {
+      nextExpandedDirs.add(dirPath)
+    } else {
+      nextExpandedDirs.delete(dirPath)
+    }
+    expandedDirs = nextExpandedDirs
+  }
 
   function reset() {
     metadata = null
     metadataLoading = false
     metadataError = ''
-    tree = null
-    treeLoading = false
-    treeError = ''
+    treeNodes = new Map()
+    expandedDirs = new Set()
+    loadingDirs = new Set()
     preview = null
     patch = null
     fileLoading = false
     fileError = ''
     selectedRepoPath = ''
-    currentTreePath = ''
     selectedFilePath = ''
   }
 
@@ -57,12 +83,12 @@ export function createProjectConversationWorkspaceBrowserState(input: {
       metadata = payload.workspace
       if (!payload.workspace.available || payload.workspace.repos.length === 0) {
         selectedRepoPath = ''
-        currentTreePath = ''
         selectedFilePath = ''
-        tree = null
+        treeNodes = new Map()
+        expandedDirs = new Set()
+        loadingDirs = new Set()
         preview = null
         patch = null
-        treeError = ''
         fileError = ''
         return
       }
@@ -73,19 +99,37 @@ export function createProjectConversationWorkspaceBrowserState(input: {
         selectedRepoPath
           ? selectedRepoPath
           : (payload.workspace.repos[0]?.path ?? '')
-      const nextTreePath =
-        preserveSelection && nextRepoPath === selectedRepoPath ? currentTreePath : ''
-      const nextSelectedFilePath =
-        preserveSelection && nextRepoPath === selectedRepoPath ? selectedFilePath : ''
 
+      const repoChanged = nextRepoPath !== selectedRepoPath
+      const prevExpanded = repoChanged ? [] : [...expandedDirs]
       selectedRepoPath = nextRepoPath
-      currentTreePath = nextTreePath
-      selectedFilePath = nextSelectedFilePath
-      await loadTree(nextRepoPath, nextTreePath, { preserveSelectedFile: true, requestID })
+
+      if (repoChanged) {
+        selectedFilePath = ''
+        expandedDirs = new Set()
+        preview = null
+        patch = null
+      }
+
+      // Clear cache and reload
+      treeNodes = new Map()
+
+      await loadDirEntries('', requestID)
+      if (requestID !== loadRequestID) return
+
+      // Re-expand previously expanded directories
+      if (prevExpanded.length > 0) {
+        await Promise.all(prevExpanded.map((dir) => loadDirEntries(dir, requestID)))
+      }
+
+      // Reload selected file if preserved
+      if (preserveSelection && selectedFilePath && !repoChanged) {
+        await loadFile(selectedFilePath, { requestID })
+      }
     } catch (error) {
       if (requestID !== loadRequestID || conversationId !== input.getConversationId()) return
       metadata = null
-      tree = null
+      treeNodes = new Map()
       preview = null
       patch = null
       metadataError =
@@ -97,52 +141,40 @@ export function createProjectConversationWorkspaceBrowserState(input: {
     }
   }
 
-  async function loadTree(
-    repoPath: string,
-    path: string,
-    options: { preserveSelectedFile?: boolean; requestID?: number } = {},
-  ) {
+  async function loadDirEntries(dirPath: string, externalRequestID?: number) {
     const conversationId = input.getConversationId()
-    if (!repoPath || !conversationId) {
-      tree = null
-      return
-    }
+    const repoPath = selectedRepoPath
+    if (!repoPath || !conversationId) return
 
-    const requestID = options.requestID ?? ++loadRequestID
-    treeLoading = true
-    treeError = ''
+    const requestID = externalRequestID ?? loadRequestID
+
+    setDirLoading(dirPath, true)
 
     try {
       const payload = await listProjectConversationWorkspaceTree(conversationId, {
         repoPath,
-        path,
+        path: dirPath,
       })
       if (requestID !== loadRequestID || repoPath !== selectedRepoPath) return
 
-      tree = payload.workspaceTree
-      currentTreePath = payload.workspaceTree.path
-
-      const canKeepSelectedFile =
-        options.preserveSelectedFile &&
-        selectedFilePath &&
-        selectedFilePath.startsWith(currentTreePath ? `${currentTreePath}/` : '')
-      if (!canKeepSelectedFile) {
-        selectedFilePath = ''
-        preview = null
-        patch = null
-        fileError = ''
-      }
-      if (canKeepSelectedFile && selectedFilePath) {
-        await loadFile(selectedFilePath, { requestID })
-      }
-    } catch (error) {
-      if (requestID !== loadRequestID || repoPath !== selectedRepoPath) return
-      tree = null
-      treeError = error instanceof Error ? error.message : 'Failed to load the workspace file tree.'
+      setTreeEntries(dirPath, payload.workspaceTree.entries)
+    } catch {
+      // Individual directory load failures are silent — the directory shows as empty
     } finally {
-      if (requestID === loadRequestID && repoPath === selectedRepoPath) {
-        treeLoading = false
-      }
+      setDirLoading(dirPath, false)
+    }
+  }
+
+  async function toggleDir(dirPath: string) {
+    if (expandedDirs.has(dirPath)) {
+      setDirExpanded(dirPath, false)
+      return
+    }
+
+    setDirExpanded(dirPath, true)
+
+    if (!treeNodes.has(dirPath)) {
+      await loadDirEntries(dirPath)
     }
   }
 
@@ -189,31 +221,16 @@ export function createProjectConversationWorkspaceBrowserState(input: {
   function openRepo(repoPath: string) {
     if (!repoPath || repoPath === selectedRepoPath) return
     selectedRepoPath = repoPath
-    currentTreePath = ''
     selectedFilePath = ''
+    expandedDirs = new Set()
+    treeNodes = new Map()
     preview = null
     patch = null
-    void loadTree(repoPath, '', { preserveSelectedFile: false })
+    void loadDirEntries('')
   }
 
-  function openTreePath(path: string) {
-    void loadTree(selectedRepoPath, path, { preserveSelectedFile: true })
-  }
-
-  function openEntry(entry: ProjectConversationWorkspaceTreeEntry) {
-    if (entry.kind === 'directory') {
-      selectedFilePath = ''
-      preview = null
-      patch = null
-      void loadTree(selectedRepoPath, entry.path, { preserveSelectedFile: false })
-      return
-    }
-    void loadFile(entry.path)
-  }
-
-  function openDirtyFile(path: string) {
+  function selectFile(path: string) {
     if (!path) return
-    selectedFilePath = path
     void loadFile(path)
   }
 
@@ -227,14 +244,14 @@ export function createProjectConversationWorkspaceBrowserState(input: {
     get metadataError() {
       return metadataError
     },
-    get tree() {
-      return tree
+    get treeNodes() {
+      return treeNodes
     },
-    get treeLoading() {
-      return treeLoading
+    get expandedDirs() {
+      return expandedDirs
     },
-    get treeError() {
-      return treeError
+    get loadingDirs() {
+      return loadingDirs
     },
     get preview() {
       return preview
@@ -251,17 +268,13 @@ export function createProjectConversationWorkspaceBrowserState(input: {
     get selectedRepoPath() {
       return selectedRepoPath
     },
-    get currentTreePath() {
-      return currentTreePath
-    },
     get selectedFilePath() {
       return selectedFilePath
     },
     reset,
     refreshWorkspace,
+    toggleDir,
     openRepo,
-    openTreePath,
-    openEntry,
-    openDirtyFile,
+    selectFile,
   }
 }
