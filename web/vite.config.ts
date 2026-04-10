@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import { svelteTesting } from '@testing-library/svelte/vite'
 import { sveltekit } from '@sveltejs/kit/vite'
@@ -8,9 +7,6 @@ import { handleMockApi } from './src/lib/testing/e2e/mock-api'
 
 const defaultDevHost = '127.0.0.1'
 const defaultDevPort = 4173
-const streamdownPluginsShimPath = fileURLToPath(
-  new URL('./src/lib/features/markdown/streamdown-plugins-lite.ts', import.meta.url),
-)
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -20,13 +16,7 @@ export default defineConfig(({ mode }) => {
   const e2eMockEnabled = env.OPENASE_E2E_MOCK === '1'
 
   return {
-    plugins: [
-      streamdownPluginsShimPlugin(),
-      tailwindcss(),
-      sveltekit(),
-      svelteTesting(),
-      e2eMockApiPlugin(e2eMockEnabled),
-    ],
+    plugins: [tailwindcss(), sveltekit(), svelteTesting(), e2eMockApiPlugin(e2eMockEnabled)],
     server: proxyTarget
       ? {
           host: devHost,
@@ -58,25 +48,6 @@ export default defineConfig(({ mode }) => {
     },
   }
 })
-
-function streamdownPluginsShimPlugin() {
-  return {
-    name: 'openase-streamdown-plugins-shim',
-    enforce: 'pre' as const,
-    resolveId(source: string, importer?: string) {
-      if (source !== './plugins.js' || !importer) {
-        return null
-      }
-
-      const normalizedImporter = importer.split('\\').join('/')
-      if (!normalizedImporter.includes('/streamdown-svelte/dist/')) {
-        return null
-      }
-
-      return streamdownPluginsShimPath
-    },
-  }
-}
 
 function e2eMockApiPlugin(enabled: boolean) {
   return {
