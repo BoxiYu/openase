@@ -195,12 +195,24 @@ type OpenAPIAgentProvider struct {
 }
 
 type OpenAPIAgentProviderCapabilities struct {
-	EphemeralChat OpenAPIAgentProviderCapability `json:"ephemeral_chat"`
+	EphemeralChat OpenAPIAgentProviderCapability          `json:"ephemeral_chat"`
+	Reasoning     OpenAPIAgentProviderReasoningCapability `json:"reasoning,omitempty"`
 }
 
 type OpenAPIAgentProviderCapability struct {
 	State  string  `json:"state"`
 	Reason *string `json:"reason,omitempty"`
+}
+
+type OpenAPIAgentProviderReasoningCapability struct {
+	State                  string   `json:"state"`
+	Reason                 *string  `json:"reason,omitempty"`
+	SupportedEfforts       []string `json:"supported_efforts,omitempty"`
+	DefaultEffort          *string  `json:"default_effort,omitempty"`
+	SelectedEffort         *string  `json:"selected_effort,omitempty"`
+	EffectiveEffort        *string  `json:"effective_effort,omitempty"`
+	SupportsProviderPreset bool     `json:"supports_provider_preset,omitempty"`
+	SupportsModelOverride  bool     `json:"supports_model_override,omitempty"`
 }
 
 type OpenAPIAgentProviderCLIRateLimit struct {
@@ -253,12 +265,22 @@ type OpenAPIAgentProviderGeminiRateLimitBucket struct {
 }
 
 type OpenAPIAgentProviderModelOption struct {
-	ID            string                              `json:"id"`
-	Label         string                              `json:"label"`
-	Description   string                              `json:"description"`
-	Recommended   bool                                `json:"recommended"`
-	Preview       bool                                `json:"preview"`
-	PricingConfig *pricing.ProviderModelPricingConfig `json:"pricing_config,omitempty"`
+	ID            string                                        `json:"id"`
+	Label         string                                        `json:"label"`
+	Description   string                                        `json:"description"`
+	Recommended   bool                                          `json:"recommended"`
+	Preview       bool                                          `json:"preview"`
+	PricingConfig *pricing.ProviderModelPricingConfig           `json:"pricing_config,omitempty"`
+	Reasoning     *OpenAPIAgentProviderModelReasoningCapability `json:"reasoning,omitempty"`
+}
+
+type OpenAPIAgentProviderModelReasoningCapability struct {
+	State                  string   `json:"state"`
+	Reason                 *string  `json:"reason,omitempty"`
+	SupportedEfforts       []string `json:"supported_efforts,omitempty"`
+	DefaultEffort          *string  `json:"default_effort,omitempty"`
+	SupportsProviderPreset bool     `json:"supports_provider_preset,omitempty"`
+	SupportsModelOverride  bool     `json:"supports_model_override,omitempty"`
 }
 
 type OpenAPIAgentProviderModelCatalogEntry struct {
@@ -583,6 +605,23 @@ type OpenAPIProjectConversationWorkspaceTreeResponse struct {
 	WorkspaceTree OpenAPIProjectConversationWorkspaceTree `json:"workspace_tree"`
 }
 
+type OpenAPIProjectConversationWorkspaceSearchResult struct {
+	Path string `json:"path"`
+	Name string `json:"name"`
+}
+
+type OpenAPIProjectConversationWorkspaceSearch struct {
+	ConversationID string                                            `json:"conversation_id"`
+	RepoPath       string                                            `json:"repo_path"`
+	Query          string                                            `json:"query"`
+	Truncated      bool                                              `json:"truncated"`
+	Results        []OpenAPIProjectConversationWorkspaceSearchResult `json:"results"`
+}
+
+type OpenAPIProjectConversationWorkspaceSearchResponse struct {
+	WorkspaceSearch OpenAPIProjectConversationWorkspaceSearch `json:"workspace_search"`
+}
+
 type OpenAPIProjectConversationWorkspaceFilePreview struct {
 	ConversationID string `json:"conversation_id"`
 	RepoPath       string `json:"repo_path"`
@@ -620,6 +659,22 @@ type OpenAPIProjectConversationWorkspaceFileSaveRequest struct {
 	LineEnding   string `json:"line_ending"`
 }
 
+type OpenAPIProjectConversationWorkspaceFileCreateRequest struct {
+	RepoPath string `json:"repo_path"`
+	Path     string `json:"path"`
+}
+
+type OpenAPIProjectConversationWorkspaceFileRenameRequest struct {
+	RepoPath string `json:"repo_path"`
+	FromPath string `json:"from_path"`
+	ToPath   string `json:"to_path"`
+}
+
+type OpenAPIProjectConversationWorkspaceFileDeleteRequest struct {
+	RepoPath string `json:"repo_path"`
+	Path     string `json:"path"`
+}
+
 type OpenAPIProjectConversationWorkspaceFileSaved struct {
 	ConversationID string `json:"conversation_id"`
 	RepoPath       string `json:"repo_path"`
@@ -632,6 +687,27 @@ type OpenAPIProjectConversationWorkspaceFileSaved struct {
 
 type OpenAPIProjectConversationWorkspaceFileSavedResponse struct {
 	File OpenAPIProjectConversationWorkspaceFileSaved `json:"file"`
+}
+
+type OpenAPIProjectConversationWorkspaceFileRenamed struct {
+	ConversationID string `json:"conversation_id"`
+	RepoPath       string `json:"repo_path"`
+	FromPath       string `json:"from_path"`
+	ToPath         string `json:"to_path"`
+}
+
+type OpenAPIProjectConversationWorkspaceFileRenamedResponse struct {
+	File OpenAPIProjectConversationWorkspaceFileRenamed `json:"file"`
+}
+
+type OpenAPIProjectConversationWorkspaceFileDeleted struct {
+	ConversationID string `json:"conversation_id"`
+	RepoPath       string `json:"repo_path"`
+	Path           string `json:"path"`
+}
+
+type OpenAPIProjectConversationWorkspaceFileDeletedResponse struct {
+	File OpenAPIProjectConversationWorkspaceFileDeleted `json:"file"`
 }
 
 type OpenAPIProjectConversationWorkspaceFilePatch struct {
@@ -2482,6 +2558,7 @@ var (
 		"rollout_checklist[].status":             "Checklist status, such as done or pending.",
 		"rollout_checklist[].summary":            "Short operator-facing rollout guidance for this checklist item.",
 		"model_name":                             "Model name configured for the provider.",
+		"reasoning_effort":                       "Optional provider-level reasoning or thinking preset. Leave empty to use the selected model default.",
 		"model_temperature":                      "Sampling temperature configured for the provider model.",
 		"model_max_tokens":                       "Maximum number of output tokens allowed for the provider model.",
 		"max_parallel_runs":                      "Maximum number of concurrent runs allowed for the provider.",
@@ -2775,6 +2852,19 @@ var (
 		"encoding":      "Normalized text encoding for the save request. V1 supports utf-8 only.",
 		"line_ending":   "Requested line ending style to preserve when writing the file.",
 	}
+	openAPIProjectConversationWorkspaceFileCreateDescriptions = map[string]string{
+		"repo_path": "Workspace-relative repo path chosen from the workspace metadata response.",
+		"path":      "Repo-relative file path to create inside the conversation workspace. Missing parent directories are created safely within the repo root.",
+	}
+	openAPIProjectConversationWorkspaceFileRenameDescriptions = map[string]string{
+		"repo_path": "Workspace-relative repo path chosen from the workspace metadata response.",
+		"from_path": "Repo-relative existing file path to rename.",
+		"to_path":   "Repo-relative destination file path. Missing parent directories are created safely within the repo root.",
+	}
+	openAPIProjectConversationWorkspaceFileDeleteDescriptions = map[string]string{
+		"repo_path": "Workspace-relative repo path chosen from the workspace metadata response.",
+		"path":      "Repo-relative existing file path to delete from the conversation workspace.",
+	}
 	openAPIRoleBindingRequestDescriptions = map[string]string{
 		"subject_kind": "Binding subject kind. Supported values are user and group.",
 		"subject_key":  "For user bindings, an existing user UUID or email that resolves to one canonical user subject. For group bindings, the synchronized OIDC group key.",
@@ -2885,7 +2975,10 @@ var (
 		"POST /api/v1/projects/{projectId}/hr-advisor/activate":                                        openAPIHRAdvisorActivateDescriptions,
 		"POST /api/v1/chat":               openAPIChatRequestDescriptions,
 		"POST /api/v1/chat/conversations": openAPIProjectConversationCreateDescriptions,
+		"POST /api/v1/chat/conversations/{conversationId}/workspace/file":                   openAPIProjectConversationWorkspaceFileCreateDescriptions,
 		"PUT /api/v1/chat/conversations/{conversationId}/workspace/file":                    openAPIProjectConversationWorkspaceFileSaveDescriptions,
+		"PATCH /api/v1/chat/conversations/{conversationId}/workspace/file":                  openAPIProjectConversationWorkspaceFileRenameDescriptions,
+		"DELETE /api/v1/chat/conversations/{conversationId}/workspace/file":                 openAPIProjectConversationWorkspaceFileDeleteDescriptions,
 		"POST /api/v1/chat/conversations/{conversationId}/terminal-sessions":                openAPIProjectConversationTerminalSessionDescriptions,
 		"POST /api/v1/chat/conversations/{conversationId}/turns":                            openAPIProjectConversationTurnDescriptions,
 		"POST /api/v1/chat/conversations/{conversationId}/interrupts/{interruptId}/respond": openAPIProjectConversationInterruptResponseDescriptions,
@@ -6690,6 +6783,37 @@ func (b openAPISpecBuilder) addChatOperations() error {
 	)
 	b.doc.AddOperation("/api/v1/chat/conversations/{conversationId}/workspace/tree", http.MethodGet, projectConversationWorkspaceTree)
 
+	projectConversationWorkspaceSearch, err := b.jsonOperation(
+		"searchProjectConversationWorkspacePaths",
+		"Search project conversation workspace file paths within one repo",
+		[]string{"chat"},
+		http.StatusOK,
+		OpenAPIProjectConversationWorkspaceSearchResponse{},
+		nil,
+		http.StatusBadRequest,
+		http.StatusConflict,
+		http.StatusNotFound,
+		http.StatusServiceUnavailable,
+		http.StatusInternalServerError,
+	)
+	if err != nil {
+		return err
+	}
+	projectConversationWorkspaceSearch.AddParameter(uuidPathParameter("conversationId", "Stable OpenASE conversation ID."))
+	projectConversationWorkspaceSearch.AddParameter(openapi3.NewQueryParameter("repo_path").
+		WithDescription("Workspace-relative repo path chosen from the workspace metadata response.").
+		WithSchema(openapi3.NewStringSchema()),
+	)
+	projectConversationWorkspaceSearch.AddParameter(openapi3.NewQueryParameter("q").
+		WithDescription("Case-insensitive substring to match against repo-relative file paths.").
+		WithSchema(openapi3.NewStringSchema()),
+	)
+	projectConversationWorkspaceSearch.AddParameter(openapi3.NewQueryParameter("limit").
+		WithDescription("Optional maximum number of matches to return. Defaults to 20 and is capped at 100.").
+		WithSchema(openapi3.NewIntegerSchema()),
+	)
+	b.doc.AddOperation("/api/v1/chat/conversations/{conversationId}/workspace/search", http.MethodGet, projectConversationWorkspaceSearch)
+
 	projectConversationWorkspaceFile, err := b.jsonOperation(
 		"getProjectConversationWorkspaceFile",
 		"Read a project conversation workspace file preview",
@@ -6735,6 +6859,63 @@ func (b openAPISpecBuilder) addChatOperations() error {
 	}
 	projectConversationWorkspaceFileSave.AddParameter(uuidPathParameter("conversationId", "Stable OpenASE conversation ID."))
 	b.doc.AddOperation("/api/v1/chat/conversations/{conversationId}/workspace/file", http.MethodPut, projectConversationWorkspaceFileSave)
+
+	projectConversationWorkspaceFileCreate, err := b.jsonOperation(
+		"createProjectConversationWorkspaceFile",
+		"Create one project conversation workspace file",
+		[]string{"chat"},
+		http.StatusOK,
+		OpenAPIProjectConversationWorkspaceFileSavedResponse{},
+		OpenAPIProjectConversationWorkspaceFileCreateRequest{},
+		http.StatusBadRequest,
+		http.StatusConflict,
+		http.StatusNotFound,
+		http.StatusServiceUnavailable,
+		http.StatusInternalServerError,
+	)
+	if err != nil {
+		return err
+	}
+	projectConversationWorkspaceFileCreate.AddParameter(uuidPathParameter("conversationId", "Stable OpenASE conversation ID."))
+	b.doc.AddOperation("/api/v1/chat/conversations/{conversationId}/workspace/file", http.MethodPost, projectConversationWorkspaceFileCreate)
+
+	projectConversationWorkspaceFileRename, err := b.jsonOperation(
+		"renameProjectConversationWorkspaceFile",
+		"Rename one project conversation workspace file",
+		[]string{"chat"},
+		http.StatusOK,
+		OpenAPIProjectConversationWorkspaceFileRenamedResponse{},
+		OpenAPIProjectConversationWorkspaceFileRenameRequest{},
+		http.StatusBadRequest,
+		http.StatusConflict,
+		http.StatusNotFound,
+		http.StatusServiceUnavailable,
+		http.StatusInternalServerError,
+	)
+	if err != nil {
+		return err
+	}
+	projectConversationWorkspaceFileRename.AddParameter(uuidPathParameter("conversationId", "Stable OpenASE conversation ID."))
+	b.doc.AddOperation("/api/v1/chat/conversations/{conversationId}/workspace/file", http.MethodPatch, projectConversationWorkspaceFileRename)
+
+	projectConversationWorkspaceFileDelete, err := b.jsonOperation(
+		"deleteProjectConversationWorkspaceFile",
+		"Delete one project conversation workspace file",
+		[]string{"chat"},
+		http.StatusOK,
+		OpenAPIProjectConversationWorkspaceFileDeletedResponse{},
+		OpenAPIProjectConversationWorkspaceFileDeleteRequest{},
+		http.StatusBadRequest,
+		http.StatusConflict,
+		http.StatusNotFound,
+		http.StatusServiceUnavailable,
+		http.StatusInternalServerError,
+	)
+	if err != nil {
+		return err
+	}
+	projectConversationWorkspaceFileDelete.AddParameter(uuidPathParameter("conversationId", "Stable OpenASE conversation ID."))
+	b.doc.AddOperation("/api/v1/chat/conversations/{conversationId}/workspace/file", http.MethodDelete, projectConversationWorkspaceFileDelete)
 
 	projectConversationWorkspaceFilePatch, err := b.jsonOperation(
 		"getProjectConversationWorkspaceFilePatch",

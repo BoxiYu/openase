@@ -1,3 +1,4 @@
+import { tick } from 'svelte'
 import {
   createProjectConversation,
   startProjectConversationTurn,
@@ -42,6 +43,7 @@ type ProjectConversationRuntimeTabOpsInput = {
   ) => Promise<boolean>
   connectTabStream: (tab: ProjectConversationTabState, conversationId: string) => Promise<void>
   sortProjectConversations: (value: ProjectConversation[]) => ProjectConversation[]
+  touch: () => void
   touchConversation: (conversationId: string) => void
 }
 
@@ -159,6 +161,7 @@ export function createProjectConversationRuntimeTabOps(
       activeTab,
       activeTab.conversationId ? 'submitting_turn' : 'creating_conversation',
     )
+    input.touch()
 
     try {
       if (!activeTab.conversationId) {
@@ -178,9 +181,11 @@ export function createProjectConversationRuntimeTabOps(
         )
         input.persistTabs()
         activeTab.phase = 'connecting_stream'
+        input.touch()
         await waitForStreamConnection(activeTab, activeTab.conversationId)
       } else if (!activeTab.abortController) {
         activeTab.phase = 'connecting_stream'
+        input.touch()
         await waitForStreamConnection(activeTab, activeTab.conversationId)
       }
 
@@ -192,6 +197,9 @@ export function createProjectConversationRuntimeTabOps(
       activeTab.needsHydration = false
       activeTab.unread = false
       activeTab.phase = 'submitting_turn'
+      input.touch()
+      await tick()
+      if (!isCurrentProjectConversationOperation(activeTab, currentOperationId)) return false
       const turnResponse = await startProjectConversationTurn(activeTab.conversationId, {
         message: trimmed,
         focus: focus ?? undefined,
@@ -211,11 +219,13 @@ export function createProjectConversationRuntimeTabOps(
       } else if (activeTab.phase === 'submitting_turn') {
         activeTab.phase = 'awaiting_reply'
       }
+      input.touch()
       input.persistTabs()
       return true
     } catch (caughtError) {
       if (!isCurrentProjectConversationOperation(activeTab, currentOperationId)) return false
       activeTab.phase = 'idle'
+      input.touch()
       input.controllerInput.onError?.(
         caughtError instanceof Error ? caughtError.message : 'Failed to send project message.',
       )

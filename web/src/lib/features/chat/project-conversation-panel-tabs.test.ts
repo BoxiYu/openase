@@ -204,18 +204,25 @@ describe('ProjectConversationPanel tab behavior', () => {
       },
     })
     getProjectConversationWorkspaceDiff.mockResolvedValue(createWorkspaceDiff('conversation-1'))
-    startProjectConversationTurn.mockResolvedValue({
-      turn: { id: 'turn-1', turn_index: 1, status: 'started' },
-    })
+    startProjectConversationTurn
+      .mockResolvedValueOnce({
+        turn: { id: 'turn-1', turn_index: 1, status: 'started' },
+      })
+      .mockResolvedValueOnce({
+        turn: { id: 'turn-2', turn_index: 2, status: 'started' },
+      })
 
-    const { findByText, getByPlaceholderText, getByRole } = render(ProjectConversationPanel, {
-      props: {
-        context: { projectId: 'project-1' },
-        providers: providerFixtures,
-        defaultProviderId: 'provider-1',
-        placeholder: 'Ask anything about this project…',
+    const { findByText, getByPlaceholderText, getByRole, queryByText } = render(
+      ProjectConversationPanel,
+      {
+        props: {
+          context: { projectId: 'project-1' },
+          providers: providerFixtures,
+          defaultProviderId: 'provider-1',
+          placeholder: 'Ask anything about this project…',
+        },
       },
-    })
+    )
 
     await waitForComposerReady(getByPlaceholderText)
 
@@ -231,12 +238,20 @@ describe('ProjectConversationPanel tab behavior', () => {
         focus: undefined,
       })
     })
+    mux.emit('conversation-1', {
+      kind: 'session',
+      payload: {
+        conversationId: 'conversation-1',
+        runtimeState: 'executing',
+        providerStatus: 'active',
+        providerActiveFlags: ['running'],
+      },
+    })
 
     expect(prompt.disabled).toBe(false)
 
     await fireEvent.input(prompt, { target: { value: 'Draft the next request' } })
     expect(prompt.value).toBe('Draft the next request')
-    expect(sendButton.disabled).toBe(false)
 
     await fireEvent.keyDown(prompt, { key: 'Enter' })
     expect(startProjectConversationTurn).toHaveBeenCalledTimes(1)
@@ -249,10 +264,26 @@ describe('ProjectConversationPanel tab behavior', () => {
     })
 
     await waitFor(() => {
+      expect(queryByText('Queued')).toBeNull()
+      expect(queryByText('Sending your message…')).toBeTruthy()
+    })
+    await waitFor(() => {
       expect(startProjectConversationTurn).toHaveBeenNthCalledWith(2, 'conversation-1', {
         message: 'Draft the next request',
         focus: undefined,
       })
+    })
+    mux.emit('conversation-1', {
+      kind: 'session',
+      payload: {
+        conversationId: 'conversation-1',
+        runtimeState: 'executing',
+        providerStatus: 'active',
+        providerActiveFlags: ['running'],
+      },
+    })
+    await waitFor(() => {
+      expect(queryByText('Waiting for the assistant reply…')).toBeTruthy()
     })
   })
 
@@ -296,9 +327,18 @@ describe('ProjectConversationPanel tab behavior', () => {
         focus: undefined,
       })
     })
+    mux.emit('conversation-1', {
+      kind: 'session',
+      payload: {
+        conversationId: 'conversation-1',
+        runtimeState: 'executing',
+        providerStatus: 'active',
+        providerActiveFlags: ['running'],
+      },
+    })
 
     await fireEvent.input(prompt, { target: { value: 'Queued request' } })
-    await fireEvent.click(sendButton)
+    await fireEvent.keyDown(prompt, { key: 'Enter' })
     await findByText('Queued')
 
     await fireEvent.click(getByRole('button', { name: 'Cancel queued message 1' }))
