@@ -261,25 +261,22 @@ func (a *App) RunServe(ctx context.Context) error {
 	if _, err := instanceAuthSvc.Refresh(ctx); err != nil {
 		return fmt.Errorf("initialize instance auth runtime state: %w", err)
 	}
-	humanAuthSvc := humanauthservice.NewService(humanAuthRepo, http.DefaultClient, instanceAuthSvc)
-	humanAuthorizer := humanauthservice.NewAuthorizer(humanAuthRepo)
+	desktopAuthDisabled := desktopHumanAuthDisabled(os.Getenv)
+	var humanAuthSvc *humanauthservice.Service
+	var humanAuthorizer *humanauthservice.Authorizer
+	if desktopAuthDisabled {
+		a.logger.Info("desktop runtime requested auth bypass; human browser auth service disabled")
+	} else {
+		humanAuthSvc = humanauthservice.NewService(humanAuthRepo, http.DefaultClient, instanceAuthSvc)
+		humanAuthorizer = humanauthservice.NewAuthorizer(humanAuthRepo)
+	}
 	machineChannelSvc := machinechannelservice.NewService(machinechannelrepo.NewEntRepository(client))
 	machineSessions := machinechannelservice.NewSessionRegistry(machinechannelservice.DefaultHeartbeatTimeout)
-	server := httpapi.NewServer(
-		a.config.Server,
-		a.config.GitHub,
-		a.logger,
-		a.events,
-		ticketSvc,
-		ticketStatusSvc,
-		agentplatform.NewService(agentplatformrepo.NewEntRepository(client)),
-		catalogSvc,
-		workflowSvc,
+	serverOpts := []httpapi.ServerOption{
 		httpapi.WithGitHubAuthService(githubAuthSvc),
 		httpapi.WithGitHubRepoService(githubRepoSvc),
 		httpapi.WithSecretService(secretSvc),
 		httpapi.WithInstanceAuthService(instanceAuthSvc),
-		httpapi.WithHumanAuthService(humanAuthSvc, humanAuthorizer),
 		httpapi.WithRuntimeConfigFile(a.config.Metadata.ConfigFile),
 		httpapi.WithHomeDir(homeDir),
 		httpapi.WithTraceProvider(a.trace),
@@ -294,6 +291,21 @@ func (a *App) RunServe(ctx context.Context) error {
 		httpapi.WithMachineChannel(machineChannelSvc, machineSessions),
 		httpapi.WithReverseRuntimeRelay(a.reverseRuntimeRelay),
 		httpapi.WithTicketWorkspaceResetter(ticketWorkspaceResetSvc),
+	}
+	if humanAuthSvc != nil && humanAuthorizer != nil {
+		serverOpts = append(serverOpts, httpapi.WithHumanAuthService(humanAuthSvc, humanAuthorizer))
+	}
+	server := httpapi.NewServer(
+		a.config.Server,
+		a.config.GitHub,
+		a.logger,
+		a.events,
+		ticketSvc,
+		ticketStatusSvc,
+		agentplatform.NewService(agentplatformrepo.NewEntRepository(client)),
+		catalogSvc,
+		workflowSvc,
+		serverOpts...,
 	)
 	driver, err := a.config.ResolvedEventDriver()
 	if err != nil {
