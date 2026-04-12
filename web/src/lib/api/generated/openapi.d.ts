@@ -11334,6 +11334,16 @@ export interface operations {
                   reason?: string | null
                   state?: string
                 }
+                reasoning?: {
+                  default_effort?: string | null
+                  effective_effort?: string | null
+                  reason?: string | null
+                  selected_effort?: string | null
+                  state?: string
+                  supported_efforts?: string[]
+                  supports_model_override?: boolean
+                  supports_provider_preset?: boolean
+                }
               }
               cli_args?: string[]
               cli_command?: string
@@ -11557,6 +11567,8 @@ export interface operations {
           pricing_config?: {
             [key: string]: unknown
           }
+          /** @description Optional provider-level reasoning or thinking preset. Leave empty to use the selected model default. */
+          reasoning_effort?: string | null
           /** @description Provider runtime secret aliases keyed by environment variable name, without exposing raw secret values. */
           secret_bindings?: {
             /** @description Secret binding alias to resolve for the matching runtime environment variable. */
@@ -11588,6 +11600,16 @@ export interface operations {
                 ephemeral_chat?: {
                   reason?: string | null
                   state?: string
+                }
+                reasoning?: {
+                  default_effort?: string | null
+                  effective_effort?: string | null
+                  reason?: string | null
+                  selected_effort?: string | null
+                  state?: string
+                  supported_efforts?: string[]
+                  supports_model_override?: boolean
+                  supports_provider_preset?: boolean
                 }
               }
               cli_args?: string[]
@@ -21257,6 +21279,14 @@ export interface operations {
                   }[]
                   version?: string
                 } | null
+                reasoning?: {
+                  default_effort?: string | null
+                  reason?: string | null
+                  state?: string
+                  supported_efforts?: string[]
+                  supports_model_override?: boolean
+                  supports_provider_preset?: boolean
+                } | null
                 recommended?: boolean
               }[]
             }[]
@@ -21309,6 +21339,16 @@ export interface operations {
                 ephemeral_chat?: {
                   reason?: string | null
                   state?: string
+                }
+                reasoning?: {
+                  default_effort?: string | null
+                  effective_effort?: string | null
+                  reason?: string | null
+                  selected_effort?: string | null
+                  state?: string
+                  supported_efforts?: string[]
+                  supports_model_override?: boolean
+                  supports_provider_preset?: boolean
                 }
               }
               cli_args?: string[]
@@ -21533,6 +21573,8 @@ export interface operations {
           pricing_config?: {
             [key: string]: unknown
           } | null
+          /** @description Optional provider-level reasoning or thinking preset. Leave empty to use the selected model default. */
+          reasoning_effort?: string | null
           /** @description Provider runtime secret aliases keyed by environment variable name, without exposing raw secret values. */
           secret_bindings?:
             | {
@@ -21566,6 +21608,16 @@ export interface operations {
                 ephemeral_chat?: {
                   reason?: string | null
                   state?: string
+                }
+                reasoning?: {
+                  default_effort?: string | null
+                  effective_effort?: string | null
+                  reason?: string | null
+                  selected_effort?: string | null
+                  state?: string
+                  supported_efforts?: string[]
+                  supports_model_override?: boolean
+                  supports_provider_preset?: boolean
                 }
               }
               cli_args?: string[]
