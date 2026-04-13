@@ -4,6 +4,7 @@
   import { Badge } from '$ui/badge'
   import { formatRelativeTime } from '$lib/utils'
   import { ticketsT } from '$lib/features/tickets'
+  import TicketRunErrorCard from './ticket-run-error-card.svelte'
   import {
     connectionLabel,
     connectionTone,
@@ -118,6 +119,10 @@
       {ticketsT('tickets.transcript.loading')}
     </div>
   {/if}
+
+  <div class="mt-3">
+    <TicketRunErrorCard {run} />
+  </div>
 
   {#if canResumeRetry && onResumeRetry}
     <div class="mt-3">
