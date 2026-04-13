@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ChevronLeft, ChevronRight, Timer, TimerOff, WrapText } from '@lucide/svelte'
   import type {
+    ProjectConversationWorkspaceDiffFile,
     ProjectConversationWorkspaceFilePatch,
     ProjectConversationWorkspaceFilePreview,
   } from '$lib/api/chat'
@@ -15,6 +16,7 @@
     activePatch,
     activeFileLoading,
     activePreview,
+    activeChangedFile,
     selectedChangedFilesCount,
     showWrapToggle,
     wrapMode,
@@ -28,6 +30,7 @@
     activePatch: ProjectConversationWorkspaceFilePatch | null
     activeFileLoading: boolean
     activePreview: ProjectConversationWorkspaceFilePreview | null
+    activeChangedFile: ProjectConversationWorkspaceDiffFile | null
     selectedChangedFilesCount: number
     showWrapToggle: boolean
     wrapMode: EditorWrapMode
@@ -37,6 +40,39 @@
     onSelectNextChangedFile: () => void
     onToggleAutosave: () => void
   } = $props()
+
+  const statusLabel = $derived(activeChangedFile?.status ?? activePatch?.status ?? '')
+  const statusBadge = $derived.by(() => {
+    switch (statusLabel) {
+      case 'added':
+        return 'A'
+      case 'deleted':
+        return 'D'
+      case 'renamed':
+        return 'R'
+      case 'untracked':
+        return 'U'
+      case 'modified':
+        return 'M'
+      default:
+        return ''
+    }
+  })
+  const statusTone = $derived.by(() => {
+    switch (statusLabel) {
+      case 'added':
+      case 'untracked':
+        return 'text-emerald-700 dark:text-emerald-300'
+      case 'deleted':
+        return 'text-rose-700 dark:text-rose-300'
+      case 'renamed':
+        return 'text-sky-700 dark:text-sky-300'
+      case 'modified':
+        return 'text-amber-700 dark:text-amber-300'
+      default:
+        return 'text-muted-foreground/60'
+    }
+  })
 </script>
 
 <div
@@ -52,20 +88,6 @@
   {:else if activeEditorState?.externalChange}
     <span class="font-medium text-amber-700 dark:text-amber-300">
       {chatT('chat.workspaceChanged')}
-    </span>
-  {/if}
-  {#if activePatch?.status && activePatch.status !== 'modified'}
-    <span
-      class={cn(
-        'rounded px-1 font-bold uppercase',
-        activePatch.status === 'added'
-          ? 'text-emerald-600'
-          : activePatch.status === 'deleted'
-            ? 'text-rose-600'
-            : 'text-sky-600',
-      )}
-    >
-      {activePatch.status}
     </span>
   {/if}
   {#if selectedChangedFilesCount > 1}
@@ -86,6 +108,21 @@
     >
       <ChevronRight class="size-3" />
     </button>
+  {/if}
+  {#if statusBadge}
+    <span class="bg-border h-3 w-px"></span>
+    <span
+      class={cn('font-mono font-semibold', statusTone)}
+      data-testid="workspace-browser-status-badge"
+    >
+      {statusBadge}
+    </span>
+    <span class={statusTone} data-testid="workspace-browser-status-label">{statusLabel}</span>
+    {#if activeChangedFile}
+      <span class="text-muted-foreground/60" data-testid="workspace-browser-status-totals">
+        +{activeChangedFile.added} -{activeChangedFile.removed}
+      </span>
+    {/if}
   {/if}
 
   <span class="flex-1"></span>

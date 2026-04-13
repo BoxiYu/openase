@@ -29,7 +29,7 @@
   } = $props()
 </script>
 
-<div class="border-border flex h-9 items-center gap-1.5 border-b px-3">
+<div class="border-border flex h-11 items-center gap-1.5 border-b px-3">
   <FolderTree class="text-muted-foreground size-3 shrink-0" />
   <span class="text-[12px] font-semibold">{chatT('chat.workspaceLabel')}</span>
   {#if workspacePath}
@@ -47,6 +47,7 @@
       {/if}
     </button>
   {/if}
+
   <div class="flex-1"></div>
   {#if showTerminalButton}
     <Button

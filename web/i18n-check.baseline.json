@@ -9190,5 +9190,191 @@
     "reason": "hardcoded markup text",
     "literal": "Workflows - OpenASE",
     "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-loader.ts",
+    "reason": "hardcoded message",
+    "literal": "Failed to load the Project AI workspace.",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Loading…",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "No commits.",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Copy commit hash",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Copy short hash",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Copy commit message",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Create branch here…",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded placeholder",
+    "literal": "Branch…",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Loading…",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "No branches.",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "clean",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded placeholder",
+    "literal": "Commit message… (Ctrl+Enter to commit)",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded title",
+    "literal": "Unstage all",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded title",
+    "literal": "{file.path}\\n{file.status} · +{file.added} -{file.removed}",
+    "count": 2
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded title",
+    "literal": "Unstage",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded title",
+    "literal": "Stage all",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded title",
+    "literal": "Stage",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-branch-picker.svelte",
+    "reason": "hardcoded title",
+    "literal": "Discard",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-detail.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Project AI patch proposal",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-tab-strip.svelte",
+    "reason": "hardcoded aria-label",
+    "literal": "Unsaved changes",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar.svelte",
+    "reason": "hardcoded title",
+    "literal": "New File",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar.svelte",
+    "reason": "hardcoded title",
+    "literal": "New Folder",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Fetch",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Pull",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-browser-sidebar.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Push",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Git graph unavailable",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Author",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Authored",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Parents",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "Labels",
+    "count": 1
+  },
+  {
+    "filePath": "web/src/lib/features/chat/project-conversation-workspace-git-graph.svelte",
+    "reason": "hardcoded markup text",
+    "literal": "No labels",
+    "count": 1
   }
 ]

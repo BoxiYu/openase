@@ -38,6 +38,16 @@ func (s *Server) registerChatRoutes(api *echo.Group) {
 	api.GET("/chat/conversations/:conversationId/entries", s.handleListProjectConversationEntries)
 	api.GET("/chat/conversations/:conversationId/workspace", s.handleGetProjectConversationWorkspace)
 	api.POST("/chat/conversations/:conversationId/workspace/sync", s.handleSyncProjectConversationWorkspace)
+	api.GET("/chat/conversations/:conversationId/workspace/repo-refs", s.handleGetProjectConversationWorkspaceRepoRefs)
+	api.GET("/chat/conversations/:conversationId/workspace/git-graph", s.handleGetProjectConversationWorkspaceGitGraph)
+	api.POST("/chat/conversations/:conversationId/workspace/checkout", s.handlePostProjectConversationWorkspaceCheckout)
+	api.POST("/chat/conversations/:conversationId/workspace/git-remote-op", s.handlePostProjectConversationWorkspaceGitRemoteOp)
+	api.POST("/chat/conversations/:conversationId/workspace/git-stage", s.handlePostProjectConversationWorkspaceGitStage)
+	api.POST("/chat/conversations/:conversationId/workspace/git-stage-all", s.handlePostProjectConversationWorkspaceGitStageAll)
+	api.POST("/chat/conversations/:conversationId/workspace/git-unstage", s.handlePostProjectConversationWorkspaceGitUnstage)
+	api.POST("/chat/conversations/:conversationId/workspace/git-commit", s.handlePostProjectConversationWorkspaceGitCommit)
+	api.POST("/chat/conversations/:conversationId/workspace/git-discard", s.handlePostProjectConversationWorkspaceGitDiscard)
+	api.POST("/chat/conversations/:conversationId/workspace/create-branch", s.handlePostProjectConversationWorkspaceCreateBranch)
 	api.GET("/chat/conversations/:conversationId/workspace/tree", s.handleListProjectConversationWorkspaceTree)
 	api.GET("/chat/conversations/:conversationId/workspace/search", s.handleSearchProjectConversationWorkspacePaths)
 	api.GET("/chat/conversations/:conversationId/workspace/file", s.handleGetProjectConversationWorkspaceFile)
@@ -425,6 +435,7 @@ func writeConversationTerminalFrame(conn *websocket.Conn, event chatservice.Conv
 
 func writeProjectConversationError(c echo.Context, err error) error {
 	var readOnlyErr *chatservice.ProjectConversationWorkspaceFileReadOnlyError
+	var checkoutErr *chatservice.ProjectConversationWorkspaceCheckoutPreconditionError
 	switch {
 	case errors.Is(err, chatservice.ErrConversationTurnActive):
 		return writeAPIError(c, http.StatusConflict, "PROJECT_CONVERSATION_TURN_ALREADY_ACTIVE", err.Error())
@@ -460,6 +471,18 @@ func writeProjectConversationError(c echo.Context, err error) error {
 		return writeAPIError(c, http.StatusConflict, "PROJECT_CONVERSATION_WORKSPACE_SYNC_REQUIRED", err.Error())
 	case errors.As(err, &readOnlyErr):
 		return writeAPIError(c, http.StatusConflict, "PROJECT_CONVERSATION_WORKSPACE_FILE_READ_ONLY", err.Error())
+	case errors.As(err, &checkoutErr):
+		return writeAPIErrorWithDetails(
+			c,
+			http.StatusConflict,
+			"PROJECT_CONVERSATION_WORKSPACE_CHECKOUT_PRECONDITION_FAILED",
+			err.Error(),
+			map[string]any{
+				"reason":           string(checkoutErr.Reason),
+				"requested_branch": checkoutErr.RequestedBranch,
+				"suggested_branch": checkoutErr.SuggestedBranch,
+			},
+		)
 	case errors.Is(err, chatservice.ErrProjectConversationWorkspacePathInvalid):
 		return writeAPIError(c, http.StatusBadRequest, "PROJECT_CONVERSATION_WORKSPACE_PATH_INVALID", err.Error())
 	case errors.Is(err, chatservice.ErrProjectConversationWorkspaceEntryExists):
@@ -582,10 +605,13 @@ func mapProjectConversationWorkspaceDiffResponse(
 		files := make([]map[string]any, 0, len(repo.Files))
 		for _, file := range repo.Files {
 			files = append(files, map[string]any{
-				"path":    file.Path,
-				"status":  string(file.Status),
-				"added":   file.Added,
-				"removed": file.Removed,
+				"path":     file.Path,
+				"old_path": file.OldPath,
+				"status":   string(file.Status),
+				"staged":   file.Staged,
+				"unstaged": file.Unstaged,
+				"added":    file.Added,
+				"removed":  file.Removed,
 			})
 		}
 		repos = append(repos, map[string]any{
@@ -642,6 +668,7 @@ func mapProjectConversationWorkspaceMetadataResponse(
 			"name":          repo.Name,
 			"path":          repo.Path,
 			"branch":        repo.Branch,
+			"current_ref":   mapProjectConversationWorkspaceCurrentRefResponse(repo.CurrentRef),
 			"head_commit":   repo.HeadCommit,
 			"head_summary":  repo.HeadSummary,
 			"dirty":         repo.Dirty,
@@ -660,6 +687,103 @@ func mapProjectConversationWorkspaceMetadataResponse(
 		response["sync_prompt"] = mapProjectConversationWorkspaceSyncPromptResponse(item.SyncPrompt)
 	}
 	return response
+}
+
+func mapProjectConversationWorkspaceCurrentRefResponse(
+	item chatservice.ProjectConversationWorkspaceCurrentRef,
+) map[string]any {
+	return map[string]any{
+		"kind":             string(item.Kind),
+		"display_name":     item.DisplayName,
+		"cache_key":        item.CacheKey,
+		"branch_name":      item.BranchName,
+		"branch_full_name": item.BranchFullName,
+		"commit_id":        item.CommitID,
+		"short_commit_id":  item.ShortCommitID,
+		"subject":          item.Subject,
+	}
+}
+
+func mapProjectConversationWorkspaceRepoRefsResponse(
+	item chatservice.ProjectConversationWorkspaceRepoRefs,
+) map[string]any {
+	localBranches := make([]map[string]any, 0, len(item.LocalBranches))
+	for _, branch := range item.LocalBranches {
+		localBranches = append(localBranches, mapProjectConversationWorkspaceBranchRefResponse(branch))
+	}
+	remoteBranches := make([]map[string]any, 0, len(item.RemoteBranches))
+	for _, branch := range item.RemoteBranches {
+		remoteBranches = append(remoteBranches, mapProjectConversationWorkspaceBranchRefResponse(branch))
+	}
+	return map[string]any{
+		"conversation_id": item.ConversationID.String(),
+		"repo_path":       item.RepoPath,
+		"current_ref":     mapProjectConversationWorkspaceCurrentRefResponse(item.CurrentRef),
+		"local_branches":  localBranches,
+		"remote_branches": remoteBranches,
+	}
+}
+
+func mapProjectConversationWorkspaceBranchRefResponse(
+	item chatservice.ProjectConversationWorkspaceBranchRef,
+) map[string]any {
+	return map[string]any{
+		"name":                        item.Name,
+		"full_name":                   item.FullName,
+		"scope":                       string(item.Scope),
+		"current":                     item.Current,
+		"commit_id":                   item.CommitID,
+		"short_commit_id":             item.ShortCommitID,
+		"subject":                     item.Subject,
+		"upstream_name":               item.UpstreamName,
+		"ahead":                       item.Ahead,
+		"behind":                      item.Behind,
+		"suggested_local_branch_name": item.SuggestedLocalBranchName,
+	}
+}
+
+func mapProjectConversationWorkspaceGitGraphResponse(
+	item chatservice.ProjectConversationWorkspaceGitGraph,
+) map[string]any {
+	commits := make([]map[string]any, 0, len(item.Commits))
+	for _, commit := range item.Commits {
+		labels := make([]map[string]any, 0, len(commit.Labels))
+		for _, label := range commit.Labels {
+			labels = append(labels, map[string]any{
+				"name":      label.Name,
+				"full_name": label.FullName,
+				"scope":     string(label.Scope),
+				"current":   label.Current,
+			})
+		}
+		commits = append(commits, map[string]any{
+			"commit_id":       commit.CommitID,
+			"short_commit_id": commit.ShortCommitID,
+			"parent_ids":      commit.ParentIDs,
+			"subject":         commit.Subject,
+			"author_name":     commit.AuthorName,
+			"authored_at":     commit.AuthoredAt.UTC().Format(time.RFC3339),
+			"labels":          labels,
+			"head":            commit.Head,
+		})
+	}
+	return map[string]any{
+		"conversation_id": item.ConversationID.String(),
+		"repo_path":       item.RepoPath,
+		"limit":           item.Window.Limit,
+		"commits":         commits,
+	}
+}
+
+func mapProjectConversationWorkspaceCheckoutResponse(
+	item chatservice.ProjectConversationWorkspaceCheckoutResult,
+) map[string]any {
+	return map[string]any{
+		"conversation_id":      item.ConversationID.String(),
+		"repo_path":            item.RepoPath,
+		"current_ref":          mapProjectConversationWorkspaceCurrentRefResponse(item.CurrentRef),
+		"created_local_branch": item.CreatedLocalBranch,
+	}
 }
 
 func mapProjectConversationWorkspaceSyncPromptResponse(

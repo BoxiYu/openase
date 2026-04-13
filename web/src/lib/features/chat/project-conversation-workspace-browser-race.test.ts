@@ -1,10 +1,10 @@
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/svelte'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { ProjectConversationWorkspaceDiff } from '$lib/api/chat'
 const {
   checkoutProjectConversationWorkspaceBranch,
   commitProjectConversationWorkspace,
-  createProjectConversationTerminalSession,
   createProjectConversationWorkspaceFile,
   discardProjectConversationWorkspaceFile,
   deleteProjectConversationWorkspaceFile,
@@ -17,10 +17,10 @@ const {
   renameProjectConversationWorkspaceFile,
   searchProjectConversationWorkspacePaths,
   stageProjectConversationWorkspaceFile,
+  syncProjectConversationWorkspace,
 } = vi.hoisted(() => ({
   checkoutProjectConversationWorkspaceBranch: vi.fn(),
   commitProjectConversationWorkspace: vi.fn(),
-  createProjectConversationTerminalSession: vi.fn(),
   createProjectConversationWorkspaceFile: vi.fn(),
   discardProjectConversationWorkspaceFile: vi.fn(),
   deleteProjectConversationWorkspaceFile: vi.fn(),
@@ -33,12 +33,12 @@ const {
   renameProjectConversationWorkspaceFile: vi.fn(),
   searchProjectConversationWorkspacePaths: vi.fn(),
   stageProjectConversationWorkspaceFile: vi.fn(),
+  syncProjectConversationWorkspace: vi.fn(),
 }))
 
 vi.mock('$lib/api/chat', () => ({
   checkoutProjectConversationWorkspaceBranch,
   commitProjectConversationWorkspace,
-  createProjectConversationTerminalSession,
   createProjectConversationWorkspaceFile,
   discardProjectConversationWorkspaceFile,
   deleteProjectConversationWorkspaceFile,
@@ -51,6 +51,7 @@ vi.mock('$lib/api/chat', () => ({
   renameProjectConversationWorkspaceFile,
   searchProjectConversationWorkspacePaths,
   stageProjectConversationWorkspaceFile,
+  syncProjectConversationWorkspace,
 }))
 
 vi.mock('@xterm/xterm', () => ({
@@ -80,56 +81,34 @@ vi.mock('@xterm/addon-fit', () => ({
 }))
 
 vi.mock('@xterm/xterm/css/xterm.css', () => ({}))
-
 import ProjectConversationWorkspaceBrowser from './project-conversation-workspace-browser.svelte'
 import {
+  deferredPromise,
   ensureResizeObserver,
-  mockWorkspaceMetadata,
+  workspaceMetadata,
   workspaceDiff,
 } from './project-conversation-workspace-browser.test-helpers'
 
-class MockWebSocket {
-  static CONNECTING = 0
-  static OPEN = 1
-  static CLOSING = 2
-  static CLOSED = 3
-
-  readyState = MockWebSocket.OPEN
-  onmessage: ((event: { data: string }) => void) | null = null
-  onerror: (() => void) | null = null
-  onclose: (() => void) | null = null
-
-  constructor(public readonly url: string) {}
-
-  send() {}
-
-  close() {
-    this.readyState = MockWebSocket.CLOSED
-    this.onclose?.()
-  }
-}
-
-describe('ProjectConversationWorkspaceBrowser terminal layout', () => {
+describe('ProjectConversationWorkspaceBrowser', () => {
   beforeAll(() => {
     ensureResizeObserver()
-    vi.stubGlobal('WebSocket', MockWebSocket as unknown as typeof WebSocket)
   })
 
   beforeEach(() => {
+    mockGitContext()
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+  })
+
+  function mockGitContext() {
     getProjectConversationWorkspaceRepoRefs.mockResolvedValue({
       repoRefs: {
         conversationId: 'conversation-1',
         repoPath: 'services/openase',
-        currentRef: {
-          kind: 'branch',
-          displayName: 'agent/conv-123',
-          cacheKey: 'branch:refs/heads/agent/conv-123',
-          branchName: 'agent/conv-123',
-          branchFullName: 'refs/heads/agent/conv-123',
-          commitId: '123456789abc',
-          shortCommitId: '123456789abc',
-          subject: 'Add workspace browser scaffolding',
-        },
+        currentRef: workspaceMetadata.repos[0].currentRef,
         localBranches: [],
         remoteBranches: [],
       },
@@ -146,29 +125,96 @@ describe('ProjectConversationWorkspaceBrowser terminal layout', () => {
       checkout: {
         conversationId: 'conversation-1',
         repoPath: 'services/openase',
-        currentRef: {
-          kind: 'branch',
-          displayName: 'agent/conv-123',
-          cacheKey: 'branch:refs/heads/agent/conv-123',
-          branchName: 'agent/conv-123',
-          branchFullName: 'refs/heads/agent/conv-123',
-          commitId: '123456789abc',
-          shortCommitId: '123456789abc',
-          subject: 'Add workspace browser scaffolding',
-        },
+        currentRef: workspaceMetadata.repos[0].currentRef,
         createdLocalBranch: '',
       },
     })
-  })
+  }
+  it('ignores stale tree responses from the previous repo after the user switches repos', async () => {
+    getProjectConversationWorkspace.mockResolvedValue({
+      workspace: {
+        conversationId: 'conversation-1',
+        available: true,
+        workspacePath: '/tmp/conversation-1',
+        repos: [
+          {
+            ...workspaceMetadata.repos[0],
+          },
+          {
+            name: 'docs',
+            path: 'services/docs',
+            branch: 'agent/docs-123',
+            headCommit: 'abcdef123456',
+            headSummary: 'Docs branch',
+            dirty: false,
+            filesChanged: 0,
+            added: 0,
+            removed: 0,
+          },
+        ],
+      },
+    })
 
-  afterEach(() => {
-    cleanup()
-    vi.clearAllMocks()
-  })
+    const repoOneTree = deferredPromise<{
+      workspaceTree: {
+        conversationId: string
+        repoPath: string
+        path: string
+        entries: Array<{ path: string; name: string; kind: 'file'; sizeBytes: number }>
+      }
+    }>()
+    listProjectConversationWorkspaceTree.mockImplementation(async (_conversationId, input) => {
+      if (input.repoPath === 'services/openase') {
+        return repoOneTree.promise
+      }
+      return {
+        workspaceTree: {
+          conversationId: 'conversation-1',
+          repoPath: 'services/docs',
+          path: '',
+          entries: [{ path: 'guide.md', name: 'guide.md', kind: 'file', sizeBytes: 20 }],
+        },
+      }
+    })
 
-  it('keeps the bottom terminal panel stretched to the configured height', async () => {
-    mockWorkspaceMetadata(getProjectConversationWorkspace)
-    listProjectConversationWorkspaceTree.mockResolvedValue({
+    const multiRepoDiff = {
+      ...workspaceDiff,
+      reposChanged: 2,
+      repos: [
+        workspaceDiff.repos[0],
+        {
+          name: 'docs',
+          path: 'services/docs',
+          branch: 'agent/docs-123',
+          dirty: false,
+          filesChanged: 0,
+          added: 0,
+          removed: 0,
+          files: [],
+        },
+      ],
+    } satisfies ProjectConversationWorkspaceDiff
+
+    const view = render(ProjectConversationWorkspaceBrowser, {
+      props: {
+        conversationId: 'conversation-1',
+        workspaceDiff: multiRepoDiff,
+        workspaceDiffLoading: false,
+      },
+    })
+
+    await waitFor(() => expect(getProjectConversationWorkspace).toHaveBeenCalledTimes(1))
+    await fireEvent.click(await view.findByRole('button', { name: 'docs' }))
+
+    await waitFor(() => {
+      expect(listProjectConversationWorkspaceTree).toHaveBeenCalledWith('conversation-1', {
+        repoPath: 'services/docs',
+        path: '',
+      })
+    })
+    await view.findByRole('button', { name: 'guide.md' })
+
+    repoOneTree.resolve({
       workspaceTree: {
         conversationId: 'conversation-1',
         repoPath: 'services/openase',
@@ -176,37 +222,10 @@ describe('ProjectConversationWorkspaceBrowser terminal layout', () => {
         entries: [{ path: 'README.md', name: 'README.md', kind: 'file', sizeBytes: 64 }],
       },
     })
-    createProjectConversationTerminalSession.mockResolvedValue({
-      terminalSession: {
-        id: 'terminal-1',
-        mode: 'shell',
-        cwd: '/tmp/conversation-1',
-        wsPath: '/api/v1/chat/conversations/conversation-1/terminal-sessions/terminal-1/attach',
-        attachToken: 'attach-token-1',
-      },
-    })
+    await repoOneTree.promise
+    await Promise.resolve()
 
-    const view = render(ProjectConversationWorkspaceBrowser, {
-      props: {
-        conversationId: 'conversation-1',
-        workspaceDiff,
-        workspaceDiffLoading: false,
-      },
-    })
-
-    await waitFor(() => expect(getProjectConversationWorkspace).toHaveBeenCalledTimes(1))
-    await fireEvent.click(view.getByRole('button', { name: 'Toggle Terminal' }))
-
-    const viewport = await view.findByTestId('workspace-terminal-instance')
-    const panelContent = viewport.parentElement as HTMLElement
-    const panelRoot = panelContent.parentElement as HTMLElement
-    const panelWrapper = panelRoot.parentElement as HTMLElement
-
-    expect(panelRoot.className).toContain('h-full')
-    expect(panelWrapper.className).toContain('flex')
-    expect(panelWrapper.className).toContain('min-h-0')
-    expect(panelWrapper.className).toContain('shrink-0')
-    expect(panelWrapper.className).toContain('overflow-hidden')
-    expect(panelWrapper.getAttribute('style')).toContain('height: 260px')
+    expect(view.container.textContent).toContain('guide.md')
+    expect(view.queryByRole('button', { name: /README\.md/ })).toBeNull()
   })
 })
